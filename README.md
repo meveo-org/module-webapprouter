@@ -5,7 +5,7 @@ This is a meveo module that installs an endpoint and script that allows webapps 
 
 ### Installation
 
-1. Install [meveo](https://github.com/meveo-org/install) and login to the administration console.
+1. [Install meveo](https://github.com/meveo-org/install) and login to the administration console.
 
 2. On the administration console menu, navigate to `Configuration > Module`.
 
