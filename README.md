@@ -1,9 +1,16 @@
-# module-webapprouter
-Module that serve webapps
+## module-webapprouter
+This is a meveo module that installs an endpoint and script that allows webapps to be served through the meveo endpoint API.
 
-As of May 27 2020, only the meveo module should be used. The postman collection and the java code are deprecated.
+>As of May 27 2020, only this module should be used when deploying the webapp router. The postman collection and the java code are deprecated.
 
-## Installation
-log to the [meveo console](https://github.com/meveo-org/install) then go to Configuration/Module and click the import MeveoModule button.
-Select the latest version of the [WEBAPPROUTER file](https://github.com/meveo-org/module-webapprouter/tree/master/meveo%20module) and upload it.
-Once uploaded click on the name of the module in the list and click on "Install" button.  
+### Installation
+
+1. Install [meveo](https://github.com/meveo-org/install) and login to the administration console.
+
+2. On the administration console menu, navigate to `Configuration > Module`.
+
+3. On the Module page, click the `Import MeveoModule` button.
+
+4. Select the latest version of the [WEBAPPROUTER JSON](https://github.com/meveo-org/module-webapprouter/tree/master/meveo%20module) from the `meveo module` folder of this repository and upload it.
+
+5. Once uploaded select `WEBAPPROUTER` in the modules list and click on the `Install` button.
