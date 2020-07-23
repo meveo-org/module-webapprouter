@@ -15,6 +15,7 @@
       "serviceCode" : "org.manaty.webapp.WebApp",
       "synchronous" : true,
       "method" : "GET",
+      "checkPathParams" : false,
       "parameterMappings" : [ ],
       "pathParameters" : [ "appCode" ],
       "roles" : [ ],
