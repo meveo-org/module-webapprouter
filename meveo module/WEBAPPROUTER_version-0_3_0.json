@@ -12,6 +12,7 @@
     "dtoClassName" : "org.meveo.api.dto.technicalservice.endpoint.EndpointDto",
     "dtoData" : {
       "code" : "webapp",
+      "secured" : false,
       "serviceCode" : "org.manaty.webapp.WebApp",
       "synchronous" : true,
       "method" : "GET",
