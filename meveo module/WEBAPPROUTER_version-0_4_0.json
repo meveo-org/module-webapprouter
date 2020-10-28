@@ -1,0 +1,221 @@
+[ {
+  "active" : true,
+  "code" : "WEBAPPROUTER",
+  "description" : "Meveo WebApp",
+  "license" : "GPL",
+  "currentVersion" : "0.4.0",
+  "meveoVersionBase" : "6.9.0",
+  "transient" : true,
+  "inDraft" : true,
+  "codeOnly" : false,
+  "moduleItems" : [ {
+    "dtoClassName" : "org.meveo.api.dto.technicalservice.endpoint.EndpointDto",
+    "dtoData" : {
+      "code" : "webapp",
+      "secured" : false,
+      "checkPathParams" : false,
+      "serviceCode" : "org.manaty.webapp.WebApp",
+      "synchronous" : true,
+      "method" : "GET",
+      "parameterMappings" : [ ],
+      "pathParameters" : [ "appCode" ],
+      "roles" : [ ],
+      "returnedVariableName" : "result",
+      "serializeResult" : false
+    }
+  }, {
+    "dtoClassName" : "org.meveo.api.dto.ScriptInstanceDto",
+    "dtoData" : {
+      "active" : true,
+      "code" : "org.meveo.script.GenerateWebAppScript",
+      "description" : "Generates a web app when a module is installed",
+      "inputs" : [ {
+        "name" : "module",
+        "type" : "MeveoModule",
+        "description" : null
+      } ],
+      "outputs" : [ {
+        "name" : "module",
+        "type" : "MeveoModule",
+        "description" : null
+      }, {
+        "name" : "defaultRepository",
+        "type" : "Repository",
+        "description" : null
+      } ],
+      "generateOutputs" : false,
+      "type" : "JAVA",
+      "transactionType" : "SAME",
+      "script" : "package org.meveo.script;\n\nimport java.io.File;\nimport java.io.IOException;\nimport java.nio.file.Files;\nimport java.nio.file.Path;\nimport java.nio.file.StandardCopyOption;\nimport java.util.ArrayList;\nimport java.util.Arrays;\nimport java.util.List;\nimport java.util.Map;\nimport java.util.regex.Matcher;\nimport java.util.regex.Pattern;\nimport java.util.Set;\nimport java.util.stream.Collectors;\nimport java.util.stream.Stream;\n\nimport org.meveo.admin.exception.BusinessException;\nimport org.meveo.api.exception.EntityDoesNotExistsException;\nimport org.meveo.commons.utils.ParamBean;\nimport org.meveo.commons.utils.ParamBeanFactory;\nimport org.meveo.model.crm.CustomFieldTemplate;\nimport org.meveo.model.customEntities.CustomEntityInstance;\nimport org.meveo.model.customEntities.CustomEntityTemplate;\nimport org.meveo.model.customEntities.WebApplication;\nimport org.meveo.model.git.GitRepository;\nimport org.meveo.model.module.MeveoModule;\nimport org.meveo.model.module.MeveoModuleItem;\nimport org.meveo.model.storage.Repository;\nimport org.meveo.persistence.CrossStorageService;\nimport org.meveo.security.MeveoUser;\nimport org.meveo.service.admin.impl.MeveoModuleService;\nimport org.meveo.service.crm.impl.CustomFieldInstanceService;\nimport org.meveo.service.crm.impl.CustomFieldTemplateService;\nimport org.meveo.service.custom.CustomEntityTemplateService;\nimport org.meveo.service.git.GitClient;\nimport org.meveo.service.git.GitHelper;\nimport org.meveo.service.git.GitRepositoryService;\nimport org.meveo.service.script.Script;\nimport org.meveo.service.storage.RepositoryService;\nimport org.meveo.util.EntityCustomizationUtils;\n\nimport org.slf4j.Logger;\nimport org.slf4j.LoggerFactory;\n\npublic class GenerateWebAppScript extends Script {\n\tprivate static final String CUSTOM_TEMPLATE = CustomEntityTemplate.class.getName();\n\tprivate static final String MV_TEMPLATE_REPO = \"https://github.com/meveo-org/mv-template.git\";\n\tprivate static final String WEB_APP_TEMPLATE = WebApplication.class.getSimpleName();\n\tprivate static final Logger LOG = LoggerFactory.getLogger(GenerateWebAppScript.class);\n\tprivate CrossStorageService crossStorageService = getCDIBean(CrossStorageService.class);\n\tprivate CustomEntityTemplateService cetService = getCDIBean(CustomEntityTemplateService.class);\n\tprivate CustomFieldInstanceService cfiService = getCDIBean(CustomFieldInstanceService.class);\n\tprivate CustomFieldTemplateService cftService = getCDIBean(CustomFieldTemplateService.class);\n\tprivate GitClient gitClient = getCDIBean(GitClient.class);\n\tprivate GitRepositoryService gitRepositoryService = getCDIBean(GitRepositoryService.class);\n\tprivate MeveoModuleService meveoModuleService = getCDIBean(MeveoModuleService.class);\n\tprivate RepositoryService repositoryService = getCDIBean(RepositoryService.class);\n\n\tprivate Repository repository;\n\tprivate MeveoModule module = null;\n\n\tpublic MeveoModule getModule() {\n\t\treturn this.module;\n\t}\n\n\tpublic void setModule(MeveoModule module) {\n\t\tthis.module = module;\n\t}\n\n\tpublic Repository getDefaultRepository() {\n\t\tif (repository == null) {\n\t\t\trepository = repositoryService.findDefaultRepository();\n\t\t}\n\t\treturn repository;\n\t}\n\n\t@Override\n\tpublic void execute(Map<String, Object> parameters) throws BusinessException {\n\t\tLOG.debug(\"START - GenerateWebAppScript.execute()\");\n\t\tsuper.execute(parameters);\n\t\t// LOG.debug(\"parameters: {}\", parameters.keySet().stream().map(key -> key + \"=\"\n\t\t// + parameters.get(key))\n\t\t// .collect(Collectors.joining(\", \", \"{\", \"}\")));\n\t\tString moduleCode = \"CaseManagement\";// ((MeveoModule) parameters.get(\"module\")).getCode();\n\t\tLOG.debug(\"moduleCode: {}\", moduleCode);\n\t\tMeveoModule module = meveoModuleService.findByCode(moduleCode);\n\t\tParamBeanFactory paramBeanFactory = getCDIBean(ParamBeanFactory.class);\n\t\tParamBean appConfig = paramBeanFactory.getInstance();\n\t\tMeveoUser user = (MeveoUser) parameters.get(CONTEXT_CURRENT_USER);\n\t\tLOG.debug(\"user: {}\", user);\n\n\t\tif (module != null) {\n\t\t\tLOG.debug(\"Module found: {}\", module.getCode());\n\t\t\tList<Map<String, Object>> webapp = null;\n\t\t\tCustomEntityTemplate template = null;\n\t\t\ttry {\n\t\t\t\ttemplate = cetService.findByCodeOrDbTablename(WEB_APP_TEMPLATE);\n\t\t\t\tLOG.debug(\"template={}\", template);\n\t\t\t\twebapp = crossStorageService.find(getDefaultRepository(), template, null);\n\t\t\t\tLOG.debug(\"webapp={}\", webapp);\n\t\t\t} catch (EntityDoesNotExistsException e) {\n\t\t\t\twebapp = null;\n\t\t\t}\n\t\t\tSet<MeveoModuleItem> moduleItems = module.getModuleItems();\n\t\t\tLOG.debug(\"CUSTOM_TEMPLATE={}\", CUSTOM_TEMPLATE);\n\t\t\tList<String> entityCodes = moduleItems.stream().filter(item -> CUSTOM_TEMPLATE.equals(item.getItemClass()))\n\t\t\t\t\t.map(entity -> entity.getItemCode()).collect(Collectors.toList());\n\t\t\tLOG.debug(\"entityCodes: {}\", entityCodes);\n\n\t\t\tCustomEntityInstance webappInstance = new CustomEntityInstance();\n\t\t\twebappInstance.setCode(moduleCode);\n\t\t\twebappInstance.setCetCode(WEB_APP_TEMPLATE);\n\t\t\twebappInstance.setDescription(moduleCode + \" Web Application\");\n\t\t\tif (webapp != null && !webapp.isEmpty()) {\n\t\t\t\tLOG.debug(\"UPDATE Web App CEI\");\n\t\t\t\tString uuid = (String) webapp.get(0).get(\"uuid\");\n\t\t\t\tLOG.debug(\"uuid: {}\", uuid);\n\t\t\t\twebappInstance.setUuid(uuid);\n\t\t\t}\n\t\t\ttry {\n\t\t\t\tcfiService.setCFValue(webappInstance, \"code\", moduleCode);\n\t\t\t\tcfiService.setCFValue(webappInstance, \"ROOT_PATH\", \"/git/\" + moduleCode);\n\t\t\t\tcfiService.setCFValue(webappInstance, \"entities\", entityCodes);\n\t\t\t\tcfiService.setCFValue(webappInstance, \"label\", WebAppScriptHelper.toTitleName(moduleCode));\n\t\t\t\tcrossStorageService.createOrUpdate(getDefaultRepository(), webappInstance);\n\t\t\t} catch (Exception e) {\n\t\t\t\tLOG.error(\"Failed creating cei {}\", e);\n\t\t\t\tthrow new BusinessException(\"Failed creating cei \" + e.getMessage());\n\t\t\t}\n\n\t\t\tGitRepository webappTemplateRepo = gitRepositoryService.findByCode(WEB_APP_TEMPLATE);\n\n\t\t\tif (webappTemplateRepo == null) {\n\t\t\t\tLOG.debug(\"CREATE NEW GitRepository: {}\", WEB_APP_TEMPLATE);\n\t\t\t\twebappTemplateRepo = new GitRepository();\n\t\t\t\twebappTemplateRepo.setCode(WEB_APP_TEMPLATE);\n\t\t\t\twebappTemplateRepo.setDescription(WEB_APP_TEMPLATE + \" Template repository\");\n\t\t\t\twebappTemplateRepo.setRemoteOrigin(MV_TEMPLATE_REPO);\n\t\t\t\twebappTemplateRepo.setDefaultRemoteUsername(\"\");\n\t\t\t\twebappTemplateRepo.setDefaultRemotePassword(\"\");\n\t\t\t\tgitRepositoryService.create(webappTemplateRepo);\n\t\t\t}\n\n\t\t\tFile webappTemplateDirectory = GitHelper.getRepositoryDir(user, WEB_APP_TEMPLATE);\n\t\t\tPath webappTemplatePath = webappTemplateDirectory.toPath();\n\n\t\t\tLOG.debug(\"webappTemplate path: {}\", webappTemplatePath.toString());\n\n\t\t\tGitRepository moduleWebAppRepo = gitRepositoryService.findByCode(moduleCode);\n\t\t\tif (moduleWebAppRepo == null) {\n\n\t\t\t\tString remoteUrl = appConfig.getProperty(\"meveo.git.directory.remote.url\", null);\n\t\t\t\tString remoteUsername = appConfig.getProperty(\"meveo.git.directory.remote.username\", null);\n\t\t\t\tString remotePassword = appConfig.getProperty(\"meveo.git.directory.remote.password\", null);\n\n\t\t\t\tmoduleWebAppRepo = new GitRepository();\n\t\t\t\tmoduleWebAppRepo.setCode(moduleCode);\n\t\t\t\tmoduleWebAppRepo.setRemoteOrigin(remoteUrl);\n\t\t\t\tmoduleWebAppRepo.setDefaultRemoteUsername(remoteUsername);\n\t\t\t\tmoduleWebAppRepo.setDefaultRemotePassword(remotePassword);\n\n\t\t\t\tgitRepositoryService.create(moduleWebAppRepo);\n\t\t\t}\n\n\t\t\tFile moduleWebAppDirectory = GitHelper.getRepositoryDir(user, moduleCode);\n\t\t\tPath moduleWebAppPath = moduleWebAppDirectory.toPath();\n\n\t\t\tLOG.debug(\"moduleWebApp path: {}\", moduleWebAppPath.toString());\n\n\t\t\ttry (Stream<Path> sourceStream = Files.walk(webappTemplatePath)) {\n\t\t\t\tList<Path> sources = sourceStream.collect(Collectors.toList());\n\t\t\t\tList<Path> destinations = sources.stream().map(webappTemplatePath::relativize).map(moduleWebAppPath::resolve)\n\t\t\t\t\t\t.collect(Collectors.toList());\n\n\t\t\t\tList<File> filesToCommit = new ArrayList<>();\n\n\t\t\t\tfor (int index = 0; index < sources.size(); index++) {\n\t\t\t\t\tPath sourcePath = sources.get(index);\n\t\t\t\t\tPath destinationPath = destinations.get(index);\n\t\t\t\t\tLOG.debug(\"COPYING: {}\", sourcePath.toString());\n\t\t\t\t\tLOG.debug(\"TO: {}\", destinationPath.toString());\n\t\t\t\t\tFile destinationFile = new File(destinationPath.toString());\n\t\t\t\t\tif (!destinationFile.isDirectory()) {\n\t\t\t\t\t\tFiles.copy(sourcePath, destinationPath, StandardCopyOption.REPLACE_EXISTING,\n\t\t\t\t\t\t\t\tStandardCopyOption.COPY_ATTRIBUTES);\n\t\t\t\t\t\tfilesToCommit.add(destinationFile);\n\t\t\t\t\t}\n\t\t\t\t}\n\t\t\t\tif (filesToCommit.size() > 0) {\n\t\t\t\t\tgitClient.commitFiles(moduleWebAppRepo, filesToCommit, \"Initialize Entity GUI template\");\n\t\t\t\t}\n\t\t\t} catch (IOException ioe) {\n\t\t\t\tthrow new BusinessException(ioe);\n\t\t\t}\n\n\t\t\t// final File gitDirectory = GitHelper.getRepositoryDir(user, moduleCode);\n\t\t\t// LOG.debug(\"gitDirectory: {}\", gitDirectory.toString());\n\n\t\t\t// entityCodes.forEach(entityCode -> {\n\t\t\t// \tCustomEntityTemplate cet = cetService.findByCodeOrDbTablename(entityCode);\n\t\t\t// \tcet = cetService.refreshOrRetrieve(cet);\n\t\t\t// \tLOG.debug(\"cet: {}\", cet);\n\t\t\t// \tif (cet != null) {\n\t\t\t// \t\tString cetId = cet.getAppliesTo();\n\t\t\t// \t\tLOG.debug(\"cetId: {}\", cetId);\n\t\t\t// \t\tMap<String, CustomFieldTemplate> cfts = cftService.findByAppliesTo(cetId);\n\t\t\t// \t\tLOG.debug(\"Custom Field Templates: {}\", cfts.keySet().stream()\n\t\t\t// \t\t\t\t.map(key -> key + \" = \" + cfts.get(key).getFieldType()).collect(Collectors.joining(\", \", \"{\", \"}\")));\n\t\t\t// \t}\n\t\t\t// });\n\n\t\t}\n\t\tLOG.debug(\"END - GenerateWebAppScript.execute()\");\n\t}\n\n}\n\nclass WebAppScriptHelper {\n\tprivate static final String WORD_REGEX = \"(?<=[a-z])(?=[A-Z])|(?<=[A-Z])(?=[A-Z][a-z])|_|\\\\s|-\";\n\tprivate static final String DASH = \"-\";\n\tprivate static final String SPACE = \" \";\n\tprivate static final String UNDERSCORE = \"_\";\n\n\tprivate static final String[] separateToWords(String inputString) {\n\t\tPattern pattern = Pattern.compile(WORD_REGEX);\n\t\tMatcher matcher = pattern.matcher(inputString);\n\t\tString text = matcher.replaceAll(SPACE);\n\t\treturn text.split(SPACE);\n\t}\n\n\tstatic final String toTitleName(String inputString) {\n\t\tif (inputString == null || inputString.isEmpty()) {\n\t\t\treturn inputString;\n\t\t}\n\t\treturn Arrays.stream(separateToWords(inputString))\n\t\t\t\t.map(word -> word.isEmpty() ? word : Character.toTitleCase(word.charAt(0)) + word.substring(1).toLowerCase())\n\t\t\t\t.collect(Collectors.joining(SPACE));\n\t}\n\n\tstatic final String toConstantName(String inputString) {\n\t\tif (inputString == null || inputString.isEmpty()) {\n\t\t\treturn inputString;\n\t\t}\n\t\treturn Arrays.stream(separateToWords(inputString)).map(word -> word.isEmpty() ? word : word.toUpperCase())\n\t\t\t\t.collect(Collectors.joining(UNDERSCORE));\n\t}\n\n\tstatic final String toVariableName(String inputString) {\n\t\tif (inputString == null || inputString.isEmpty()) {\n\t\t\treturn inputString;\n\t\t}\n\t\tString text = toTitleName(inputString);\n\t\treturn Character.toLowerCase(text.charAt(0)) + text.substring(1).toLowerCase();\n\t}\n\n\tstatic final String toTagName(String inputString) {\n\t\tif (inputString == null || inputString.isEmpty()) {\n\t\t\treturn inputString;\n\t\t}\n\t\treturn Arrays.stream(separateToWords(inputString)).map(word -> word.isEmpty() ? word : word.toLowerCase())\n\t\t\t\t.collect(Collectors.joining(DASH));\n\t}\n}\n",
+      "executionRoles" : [ ],
+      "sourcingRoles" : [ ],
+      "mavenDependencies" : [ ],
+      "importScriptInstances" : [ ]
+    }
+  }, {
+    "dtoClassName" : "org.meveo.api.dto.ScriptInstanceDto",
+    "dtoData" : {
+      "active" : true,
+      "code" : "org.manaty.webapp.WebApp",
+      "description" : "Serve Meveo Web Application",
+      "inputs" : [ {
+        "name" : "appCode",
+        "type" : "String",
+        "description" : null
+      } ],
+      "outputs" : [ {
+        "name" : "result",
+        "type" : "Object",
+        "description" : null
+      }, {
+        "name" : "appCode",
+        "type" : "String",
+        "description" : null
+      } ],
+      "generateOutputs" : false,
+      "type" : "JAVA",
+      "transactionType" : "SAME",
+      "script" : "/*\n * (C) Copyright 2018-2019 Manaty SARL (https://manaty.net) and contributors.\n *\n * This program is free software: you can redistribute it and/or modify it under the terms of the\n * GNU Affero General Public License as published by the Free Software Foundation, either version 3\n * of the License, or (at your option) any later version.\n *\n * This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without\n * even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. This program is\n * not suitable for any direct or indirect application in MILITARY industry See the GNU Affero\n * General Public License for more details.\n *\n * You should have received a copy of the GNU Affero General Public License along with this program.\n * If not, see <http://www.gnu.org/licenses/>.\n */\npackage org.manaty.webapp;\n\nimport org.meveo.api.rest.technicalservice.impl.EndpointResponse;\nimport org.meveo.api.rest.technicalservice.impl.EndpointRequest;\nimport org.meveo.commons.utils.EjbUtils;\nimport org.meveo.commons.utils.ParamBean;\nimport org.meveo.commons.utils.ParamBeanFactory;\nimport org.meveo.model.crm.EntityReferenceWrapper;\nimport org.meveo.model.customEntities.CustomEntityInstance;\nimport org.meveo.service.custom.CustomEntityInstanceService;\nimport org.meveo.service.script.Script;\nimport org.slf4j.Logger;\nimport org.slf4j.LoggerFactory;\nimport java.io.File;\nimport java.nio.file.Files;\nimport java.io.IOException;\nimport java.net.URLDecoder;\nimport java.util.Arrays;\nimport java.util.Map;\n\npublic class WebApp extends Script {\n\n    // ..bytes = 10KB.\n    private static final int DEFAULT_BUFFER_SIZE = 10240;\n\n    // ..ms = 1 week.\n    private static final long DEFAULT_EXPIRE_TIME = 604800000L;\n\n    private static final String MULTIPART_BOUNDARY = \"MULTIPART_BYTERANGES\";\n\n    private static final Logger log = LoggerFactory.getLogger(WebApp.class);\n\n    private static ParamBeanFactory paramBeanFactory = (ParamBeanFactory) EjbUtils.getServiceInterface(ParamBeanFactory.class.getSimpleName());\n\n    private ParamBean config = paramBeanFactory.getInstance();\n\n    private String basePath;\n\n    private String webappPath;\n\n    private Object result = \"\";\n\n    private String appCode = \"\";\n\n    CustomEntityInstanceService customEntityInstanceService;\n\n    public WebApp() {\n        customEntityInstanceService = (CustomEntityInstanceService) getServiceInterface(\"CustomEntityInstanceService\");\n        basePath = config.getProperty(\"providers.rootDir\", File.separator + \"meveodata\");\n        String rootDirectory = config.getProperty(\"provider.rootDir\", \"default\");\n        basePath += File.separator + rootDirectory + File.separator;\n        webappPath = basePath + \"webapp\" + File.separator;\n        log.debug(\"basePath: {}\", basePath);\n        log.debug(\"webappPath: {}\", basePath);\n        File path = new File(webappPath);\n        if (!path.exists()) {\n            path.mkdirs();\n        }\n    }\n\n    public Object getResult() {\n        return result;\n    }\n\n    public String getAppCode() {\n        return appCode;\n    }\n\n    public void setAppCode(String appCode) {\n        this.appCode = appCode;\n    }\n\n    @Override\n    public void execute(Map<String, Object> methodContext) {\n        EndpointRequest request = (EndpointRequest) methodContext.get(\"request\");\n        EndpointResponse response = (EndpointResponse) methodContext.get(\"response\");\n        String remainingPath = request.getRemainingPath();\n        log.info(\"appCode: \" + this.appCode);\n        log.info(\"remainingPath: \" + remainingPath);\n        String appPath = \"/\" + this.appCode;\n        String rootPath = null;\n        if (remainingPath.equalsIgnoreCase(appPath)) {\n            rootPath = webappPath;\n        } else {\n            rootPath = webappPath + this.appCode;\n        }\n        try {\n            // we first try to get the file from file explorer under the webapp/appCode/ directory\n            File file = lookupFile(rootPath, remainingPath);\n            if (file == null) {\n                log.info(\"File not found in webapp, we look in git\");\n                CustomEntityInstance app = customEntityInstanceService.findByCodeByCet(\"WebApplication\", this.appCode);\n                rootPath = basePath + app.getCfValues().getCfValue(\"ROOT_PATH\").getStringValue();\n                file = lookupFile(rootPath, remainingPath);\n                // file still doesnt exist, we build it\n                if (file == null) {\n                    log.info(\"File not found in git, we build it\");\n                    result = org.manaty.webapp.HtmlApplicationSerializer.getHtml(app, remainingPath, customEntityInstanceService);\n                    return;\n                }\n            }\n            serveFile(file, request, response);\n        } catch (IOException ioException) {\n            response.setStatus(400);\n            result = \"Encountered error while trying to load \" + remainingPath;\n            return;\n        }\n    }\n\n    private File lookupFile(String rootPath, String remainingPath) throws java.io.IOException {\n        // load the file as-is at first\n        File file = new File(rootPath, URLDecoder.decode(remainingPath, \"UTF-8\"));\n        log.info(\"Looking for \" + remainingPath + \" in \" + rootPath);\n        // we attempt to load the index.html from the directory first.\n        if (!file.exists() || file.isDirectory()) {\n            if (file.isDirectory()) {\n                int subFolderIndex = remainingPath.indexOf(\"/\", 1);\n                String subFolder = subFolderIndex > -1 ? remainingPath.substring(0, subFolderIndex) : remainingPath;\n                log.info(\"Attempt to load index.html from \" + subFolder);\n                file = new File(rootPath, URLDecoder.decode(subFolder + File.separator + \"index.html\", \"UTF-8\"));\n            }\n            // default to rootPath's index.html\n            if (!file.exists()) {\n                log.info(\"Attempt to load index.html from \" + rootPath);\n                String indexFile = rootPath + File.separator + \"index.html\";\n                file = new File(indexFile);\n            }\n            // if an index.html file does not exist in both rootPath and subdirectory, we return null\n            if (!file.exists()) {\n                return null;\n            }\n        }\n        return file;\n    }\n\n    private void serveFile(File file, EndpointRequest request, EndpointResponse response) {\n        log.info(\"Serving file \" + file.getAbsolutePath());\n        // Prepare some variables. The ETag is an unique identifier of the file.\n        String fileName = file.getName();\n        long length = file.length();\n        long lastModified = file.lastModified();\n        String eTag = fileName + \"_\" + length + \"_\" + lastModified;\n        long expires = System.currentTimeMillis() + DEFAULT_EXPIRE_TIME;\n        // Validate request headers for caching ---------------------------------------------------\n        // If-None-Match header should contain \"*\" or ETag. If so, then return 304.\n        String ifNoneMatch = request.getHeader(\"If-None-Match\");\n        if (ifNoneMatch != null && matches(ifNoneMatch, eTag)) {\n            response.setStatus(304);\n            // Required in 304.\n            response.setHeader(\"ETag\", eTag);\n            // Postpone cache with 1 week.\n            response.setDateHeader(\"Expires\", expires);\n            log.debug(\"If-None-Match\");\n            return;\n        }\n        // If-Modified-Since header should be greater than LastModified. If so, then return 304.\n        // This header is ignored if any If-None-Match header is specified.\n        long ifModifiedSince = request.getDateHeader(\"If-Modified-Since\");\n        if (ifNoneMatch == null && ifModifiedSince != -1 && ifModifiedSince + 1000 > lastModified) {\n            response.setStatus(304);\n            // Required in 304.\n            response.setHeader(\"ETag\", eTag);\n            // Postpone cache with 1 week.\n            response.setDateHeader(\"Expires\", expires);\n            log.debug(\"If-Modified-Match\");\n            return;\n        }\n        // Validate request headers for resume ----------------------------------------------------\n        // If-Match header should contain \"*\" or ETag. If not, then return 412.\n        String ifMatch = request.getHeader(\"If-Match\");\n        if (ifMatch != null && !matches(ifMatch, eTag)) {\n            response.setStatus(412);\n            log.debug(\"If-Match\");\n            return;\n        }\n        // If-Unmodified-Since header should be greater than LastModified. If not, then return 412.\n        long ifUnmodifiedSince = request.getDateHeader(\"If-Unmodified-Since\");\n        if (ifUnmodifiedSince != -1 && ifUnmodifiedSince + 1000 <= lastModified) {\n            response.setStatus(412);\n            log.debug(\"If-Unmodified-Since\");\n            return;\n        }\n        // Prepare and initialize response --------------------------------------------------------\n        // Get content type by file name and set default GZIP support and content disposition.\n        String contentType = request.getServletContext().getMimeType(fileName);\n        log.debug(\"Servlet context found MIME=\" + contentType);\n        boolean acceptsGzip = false;\n        String disposition = \"inline\";\n        // To add new content types, add new mime-mapping entry in web.xml.\n        if (contentType == null) {\n            if (fileName.endsWith(\".js\")) {\n                contentType = \"application/javascript\";\n            }\n            contentType = \"application/octet-stream\";\n        }\n        // the browser and expand content type with the one and right character encoding.\n        if (contentType.startsWith(\"text\")) {\n            String acceptEncoding = request.getHeader(\"Accept-Encoding\");\n            acceptsGzip = acceptEncoding != null && accepts(acceptEncoding, \"gzip\");\n            contentType += \";charset=UTF-8\";\n        } else // the browser, then set to inline, else attachment which will pop a 'save as' dialogue.\n        if (!contentType.startsWith(\"image\")) {\n            String accept = request.getHeader(\"Accept\");\n            disposition = accept != null && accepts(accept, contentType) ? \"inline\" : \"attachment\";\n        }\n        log.info(\" content-type:\" + contentType);\n        // Initialize response.\n        response.setBufferSize(DEFAULT_BUFFER_SIZE);\n        response.setContentType(contentType);\n        response.setHeader(\"Content-Disposition\", disposition + \";filename=\\\"\" + fileName + \"\\\"\");\n        response.setHeader(\"Accept-Ranges\", \"bytes\");\n        response.setHeader(\"ETag\", eTag);\n        response.setDateHeader(\"Last-Modified\", lastModified);\n        response.setDateHeader(\"Expires\", expires);\n        try {\n            response.setOutput(Files.readAllBytes(file.toPath()));\n        } catch (IOException ioException) {\n            response.setStatus(400);\n            response.setErrorMessage(\"Encountered error while trying to load \" + fileName);\n        }\n    }\n\n    // Helpers (can be refactored to public utility class) ----------------------------------------\n    /**\n     * Returns true if the given accept header accepts the given value.\n     *\n     * @param acceptHeader The accept header.\n     * @param toAccept The value to be accepted.\n     * @return True if the given accept header accepts the given value.\n     */\n    private static boolean accepts(String acceptHeader, String toAccept) {\n        String[] acceptValues = acceptHeader.split(\"\\\\s*(,|;)\\\\s*\");\n        Arrays.sort(acceptValues);\n        return Arrays.binarySearch(acceptValues, toAccept) > -1 || Arrays.binarySearch(acceptValues, toAccept.replaceAll(\"/.*$\", \"/*\")) > -1 || Arrays.binarySearch(acceptValues, \"*/*\") > -1;\n    }\n\n    /**\n     * Returns true if the given match header matches the given value.\n     *\n     * @param matchHeader The match header.\n     * @param toMatch The value to be matched.\n     * @return True if the given match header matches the given value.\n     */\n    private static boolean matches(String matchHeader, String toMatch) {\n        String[] matchValues = matchHeader.split(\"\\\\s*,\\\\s*\");\n        Arrays.sort(matchValues);\n        return Arrays.binarySearch(matchValues, toMatch) > -1 || Arrays.binarySearch(matchValues, \"*\") > -1;\n    }\n}\n\nclass HtmlApplicationSerializer {\n\n    static final String docType = \"<!DOCTYPE html>\";\n\n    static final String ln = System.lineSeparator();\n\n    static CustomEntityInstanceService customEntityInstanceService;\n\n    static String getHtml(CustomEntityInstance app, String remainingPath, CustomEntityInstanceService ceis) {\n        customEntityInstanceService = ceis;\n        if (app.getCfValues().getCfValue(\"webPages\") == null) {\n            return docType + \"<html><body><h1>\" + app.getDescription() + \"</h1></body></html>\";\n        }\n        Map<String, EntityReferenceWrapper> webpages = (Map<String, EntityReferenceWrapper>) app.getCfValues().getCfValue(\"webPages\").getMapValue();\n        EntityReferenceWrapper webpage = null;\n        if (webpages != null && webpages.containsKey(remainingPath)) {\n            webpage = webpages.get(remainingPath);\n        }\n        if (webpage == null) {\n            return docType + \"<html><body><h1>Page \" + remainingPath + \" not found among \" + app.getCfValues().getValues() + \"</h1></body></html>\";\n        }\n        StringBuilder result = new StringBuilder();\n        result.append(docType).append(ln);\n        result.append(\"<html>\").append(ln);\n        result.append(\"<head>\").append(ln);\n        if (app.getCfValues().getCfValue(\"stylesheets\") != null) {\n            Map<String, EntityReferenceWrapper> stylesheets = (Map<String, EntityReferenceWrapper>) app.getCfValues().getCfValue(\"stylesheets\").getListValue();\n            if (stylesheets != null && stylesheets.size() > 0) {\n                result.append(getStyleSheets(stylesheets));\n            }\n        }\n        result.append(getWebpageHtml(webpage));\n        result.append(\"</html>\").append(ln);\n        return result.toString();\n    }\n\n    static String getWebpageHtml(EntityReferenceWrapper webpageWrapper) {\n        StringBuilder result = new StringBuilder();\n        CustomEntityInstance webpage = customEntityInstanceService.findByCodeByCet(\"ApplicationWebPage\", webpageWrapper.getCode());\n        result.append(\"<title>\").append(webpage.getDescription()).append(\"</title>\");\n        if (webpage.getCfValues().getCfValue(\"stylesheets\") != null) {\n            Map<String, EntityReferenceWrapper> stylesheets = (Map<String, EntityReferenceWrapper>) webpage.getCfValues().getCfValue(\"stylesheets\").getListValue();\n            if (stylesheets != null && stylesheets.size() > 0) {\n                result.append(getStyleSheets(stylesheets));\n            }\n        }\n        result.append(\"</head>\").append(ln);\n        if (webpage.getCfValues().getCfValue(\"body\") != null) {\n            result.append(\"<body>\").append(ln).append(webpage.getCfValues().getCfValue(\"body\").getStringValue()).append(\"</body>\").append(ln);\n        }\n        return result.toString();\n    }\n\n    static String getStyleSheets(Map<String, EntityReferenceWrapper> stylesheets) {\n        StringBuilder result = new StringBuilder();\n        for (EntityReferenceWrapper stylesheetWrapper : stylesheets.values()) {\n            CustomEntityInstance stylesheet = customEntityInstanceService.findByCodeByCet(\"CSSStyleSheet\", stylesheetWrapper.getCode());\n            if (stylesheet.getCfValues().getCfValue(\"externalURL\") != null) {\n                result.append(\"<link rel=\\\"stylesheet\\\" href=\\\"\").append(stylesheet.getCfValues().getCfValue(\"externalURL\").getStringValue()).append(\"\\\">\").append(ln);\n            } else {\n                result.append(\"<style>\").append(stylesheet.getCfValues().getCfValue(\"content\").getStringValue()).append(\"</style>\").append(ln);\n            }\n        }\n        return result.toString();\n    }\n}\n",
+      "executionRoles" : [ ],
+      "sourcingRoles" : [ ],
+      "mavenDependencies" : [ ],
+      "importScriptInstances" : [ ]
+    }
+  }, {
+    "dtoClassName" : "org.meveo.api.dto.CustomEntityTemplateDto",
+    "dtoData" : {
+      "code" : "WebApplication",
+      "name" : "Web Application",
+      "description" : "Web application",
+      "customEntityCategoryCode" : "APPS",
+      "availableStorages" : [ "SQL" ],
+      "sqlStorageConfiguration" : {
+        "storeAsTable" : true
+      },
+      "samples" : [ ],
+      "audited" : false,
+      "fields" : [ {
+        "code" : "ROOT_PATH",
+        "description" : "Root path of Web Application",
+        "fieldType" : "STRING",
+        "accountLevel" : "CE_WebApplication",
+        "appliesTo" : "CE_WebApplication",
+        "useInheritedAsDefaultValue" : false,
+        "storageType" : "SINGLE",
+        "valueRequired" : false,
+        "versionable" : false,
+        "triggerEndPeriodEvent" : false,
+        "listValues" : { },
+        "allowEdit" : true,
+        "hideOnNew" : false,
+        "maxValue" : 2000,
+        "contentTypes" : [ ],
+        "fileExtensions" : [ ],
+        "saveOnExplorer" : false,
+        "guiPosition" : "tab:Web Application:0;field:2",
+        "identifier" : false,
+        "storages" : [ "SQL" ],
+        "samples" : [ ],
+        "summary" : false,
+        "audited" : false,
+        "persisted" : true,
+        "filter" : false,
+        "unique" : false,
+        "matrixColumns" : [ ]
+      }, {
+        "code" : "code",
+        "description" : "Code",
+        "fieldType" : "STRING",
+        "accountLevel" : "CE_WebApplication",
+        "appliesTo" : "CE_WebApplication",
+        "useInheritedAsDefaultValue" : false,
+        "storageType" : "SINGLE",
+        "valueRequired" : true,
+        "versionable" : false,
+        "triggerEndPeriodEvent" : false,
+        "listValues" : { },
+        "allowEdit" : true,
+        "hideOnNew" : false,
+        "maxValue" : 255,
+        "contentTypes" : [ ],
+        "fileExtensions" : [ ],
+        "saveOnExplorer" : false,
+        "guiPosition" : "tab:Web Application:0;field:0",
+        "identifier" : false,
+        "storages" : [ "SQL" ],
+        "samples" : [ ],
+        "summary" : false,
+        "audited" : false,
+        "persisted" : true,
+        "filter" : false,
+        "unique" : false,
+        "matrixColumns" : [ ]
+      }, {
+        "code" : "entities",
+        "description" : "Entities included in the Web Application",
+        "fieldType" : "STRING",
+        "accountLevel" : "CE_WebApplication",
+        "appliesTo" : "CE_WebApplication",
+        "useInheritedAsDefaultValue" : false,
+        "storageType" : "LIST",
+        "valueRequired" : false,
+        "versionable" : false,
+        "triggerEndPeriodEvent" : false,
+        "listValues" : { },
+        "allowEdit" : true,
+        "hideOnNew" : false,
+        "maxValue" : 255,
+        "contentTypes" : [ ],
+        "fileExtensions" : [ ],
+        "saveOnExplorer" : false,
+        "guiPosition" : "tab:Web Application:0;field:3",
+        "identifier" : false,
+        "storages" : [ "SQL" ],
+        "samples" : [ ],
+        "summary" : false,
+        "audited" : false,
+        "persisted" : true,
+        "filter" : false,
+        "unique" : false,
+        "matrixColumns" : [ ]
+      }, {
+        "code" : "label",
+        "description" : "Label",
+        "fieldType" : "STRING",
+        "accountLevel" : "CE_WebApplication",
+        "appliesTo" : "CE_WebApplication",
+        "useInheritedAsDefaultValue" : false,
+        "storageType" : "SINGLE",
+        "valueRequired" : false,
+        "versionable" : false,
+        "triggerEndPeriodEvent" : false,
+        "listValues" : { },
+        "allowEdit" : true,
+        "hideOnNew" : false,
+        "maxValue" : 255,
+        "contentTypes" : [ ],
+        "fileExtensions" : [ ],
+        "saveOnExplorer" : false,
+        "guiPosition" : "tab:Web Application:0;field:1",
+        "identifier" : false,
+        "storages" : [ "SQL" ],
+        "samples" : [ ],
+        "summary" : false,
+        "audited" : false,
+        "persisted" : true,
+        "filter" : false,
+        "unique" : false,
+        "matrixColumns" : [ ]
+      } ],
+      "actions" : [ ]
+    }
+  }, {
+    "dtoClassName" : "org.meveo.api.dto.CustomEntityCategoryDto",
+    "dtoData" : {
+      "code" : "APPS",
+      "name" : "Apps"
+    }
+  } ],
+  "moduleDependencies" : [ ],
+  "moduleFiles" : [ ]
+} ]
