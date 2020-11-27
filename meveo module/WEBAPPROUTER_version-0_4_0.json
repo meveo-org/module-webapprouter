@@ -243,6 +243,19 @@
       "code" : "APPS",
       "name" : "Apps"
     }
+  }, {
+    "dtoClassName" : "org.meveo.api.dto.notification.ScriptNotificationDto",
+    "dtoData" : {
+      "active" : true,
+      "code" : "GenerateModuleWebApp",
+      "classNameFilter" : "org.meveo.model.module.MeveoModule",
+      "eventTypeFilter" : "POST_INSTALL",
+      "scriptInstanceCode" : "org.meveo.script.GenerateWebAppScript",
+      "scriptParams" : {
+        "module" : "${event}"
+      },
+      "priority" : 1
+    }
   } ],
   "moduleDependencies" : [ ],
   "moduleFiles" : [ ]
