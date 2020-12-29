@@ -14,3 +14,7 @@ This is a meveo module that installs an endpoint and script that allows webapps 
 4. Select the latest version of the [WEBAPPROUTER JSON](https://github.com/meveo-org/module-webapprouter/tree/master/meveo%20module) from the `meveo module` folder of this repository and upload it.
 
 5. Once uploaded select `WEBAPPROUTER` in the modules list and click on the `Install` button.
+
+### Additional Details
+1. [GenerateWebAppScript](GENERATE_WEBAPP_SCRIPT.md)
+2. WebAppRouter
