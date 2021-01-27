@@ -3,7 +3,7 @@ This describes the process being used to generate a webapp for modules installed
 
 ## Artifacts used
 1. _**WebApplication** Custom Entity_  - currently this entity contains details on the generated Web Application's configuration.  Future enhancements to this entity will allow a full Web Application to be configured with child entities for the Web Application, Pages, Forms, Fields, etc.
-2. _**GenerateModuleWebApp** Notifiction_ - This notification is used to trigger the _GenerateWebAppScript_ after a module is installed by hooking the a _MeveoModule_'s  _POST_INSTALL_ event.
+2. _**GenerateModuleWebApp** Notification_ - This notification is used to trigger the _GenerateWebAppScript_ after a module is installed by hooking the a _MeveoModule_'s  _POST_INSTALL_ event.
 
 ## Process
 1. When the installation of a _MeveoModule_ is being completed, it triggers a _POST_INSTALL_ event which is caught by the _GenerateModuleWebApp_ notification.
