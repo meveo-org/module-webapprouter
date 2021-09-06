@@ -66,6 +66,7 @@ public class GenerateWebAppScript extends Script {
 	private static final String CUSTOM_TEMPLATE = CustomEntityTemplate.class.getName();
 	private static final String WEB_APP_TEMPLATE = WebApplication.class.getSimpleName();
 	private static final String IMPORT_STATEMENT = "import %sSchema from \"%s/%s/%s\";";
+	private static final String PARENT = "Parent";
 	private static final String PAGE_TEMPLATE = "Parent.js";
 	private static final String INDEX_TEMPLATE = "index.js";
 	private static final Logger LOG = LoggerFactory.getLogger(GenerateWebAppScript.class);
@@ -220,7 +221,8 @@ public class GenerateWebAppScript extends Script {
 					File sourceFile = sourcePath.toFile();
 					File destinationFile = destinationPath.toFile();
 					boolean isGitConfigFile = sourcePath.toString().contains("/.git/");
-					boolean isModelFile = sourcePath.toString().contains("/" + WEB_APP_TEMPLATE + "/model/");
+					boolean isModelDirectory = sourcePath.toString().contains("/" + WEB_APP_TEMPLATE + "/model/");
+					boolean isModelFile = sourcePath.toString().contains("/model/model.js");
 					boolean isParentFile = sourcePath.toString().contains("/pages/Parent");
 					boolean isChildFile = sourcePath.toString().contains("/pages/Child");
 					boolean isTopbar = sourcePath.toString().contains("/components/layout/TopbarMenu.js");
@@ -231,6 +233,9 @@ public class GenerateWebAppScript extends Script {
 						if (isParentFile) {
 							filesToCommit.addAll(this.generatePages(transformer));
 						} else if (isModelFile) {
+							Files.copy(sourcePath, destinationPath, REPLACE_EXISTING, COPY_ATTRIBUTES);
+							filesToCommit.add(destinationFile);
+						} else if (isModelDirectory) {
 							filesToCommit.addAll(this.generateModels(transformer));
 						} else if (isTopbar) {
 							FileTransformer dashboardTransformer = new FileTransformer(sourcePath, destinationPath,
@@ -291,7 +296,7 @@ public class GenerateWebAppScript extends Script {
 			LOG.debug("GENERATE LIST PAGE");
 			substitutes.add(new Substitute("ParentEntityListPage", "%sListPage", WebAppScriptHelper.PASCAL));
 			substitutes.add(new Substitute("parent-entity-list-page", "%s-list-page", WebAppScriptHelper.TAG));
-			substitutes.add(new Substitute("ParentEntity", "%s", WebAppScriptHelper.PASCAL));
+			substitutes.add(new Substitute(PARENT, "%s", WebAppScriptHelper.PASCAL));
 			substitutes.add(new Substitute("GET", "POST", WebAppScriptHelper.CONSTANT));
 			files = transformer.generateFiles(substitutes);
 		}
@@ -299,7 +304,7 @@ public class GenerateWebAppScript extends Script {
 			LOG.debug("GENERATE NEW PAGE");
 			substitutes.add(new Substitute("ParentEntityNewPage", "%sNewPage", WebAppScriptHelper.PASCAL));
 			substitutes.add(new Substitute("parent-entity-new-page", "%s-new-page", WebAppScriptHelper.TAG));
-			substitutes.add(new Substitute("ParentEntity", "%s", WebAppScriptHelper.PASCAL));
+			substitutes.add(new Substitute(PARENT, "%s", WebAppScriptHelper.PASCAL));
 			files = transformer.generateFiles(substitutes);
 
 		}
@@ -307,7 +312,7 @@ public class GenerateWebAppScript extends Script {
 			LOG.debug("GENERATE UPDATE PAGE");
 			substitutes.add(new Substitute("ParentEntityUpdatePage", "%sUpdatePage", WebAppScriptHelper.PASCAL));
 			substitutes.add(new Substitute("parent-entity-update-page", "%s-update-page", WebAppScriptHelper.TAG));
-			substitutes.add(new Substitute("ParentEntity", "%s", WebAppScriptHelper.PASCAL));
+			substitutes.add(new Substitute(PARENT, "%s", WebAppScriptHelper.PASCAL));
 			files = transformer.generateFiles(substitutes);
 		}
 		return files;
@@ -352,23 +357,15 @@ public class GenerateWebAppScript extends Script {
 				StringBuilder modelContent = new StringBuilder();
 				StringBuilder refSchemas = new StringBuilder();
 				StringBuilder fieldContents = new StringBuilder();
+				StringBuilder ctorContents = new StringBuilder();
 				CustomEntityTemplate entityTemplate = cetService.findByCodeOrDbTablename(entityCode);
 				Map<String, CustomFieldTemplate> fields = cftService.findByAppliesTo(entityTemplate.getAppliesTo());
 				Set<String> refSchemaCodes = new HashSet();
 
-				modelImports.append("import { getEndpoints } from \"utils\";").append(CRLF);
-				String schemaImport = String.format(IMPORT_STATEMENT, entityName, this.baseUrl, SCHEMA_URL, entityName);
-				modelImports.append(schemaImport).append(CRLF);
-				String classDefinition = String.format("export default class %s {", entityName);
-				modelContent.append(classDefinition).append(CRLF);
-				modelContent.append(String.format("\tcode = \"%s\";", entityName)).append(CRLF);
+				modelImports.append("import Model from \"./model.js\";").append(CRLF);
+				modelContent.append(String.format("\texport const code = \"%s\";", entityName)).append(CRLF);
 				String label = WebAppScriptHelper.toTitleName(entityCode);
-				modelContent.append(String.format("\tname = \"%sEntity\";", entityName)).append(CRLF);
-				modelContent.append(String.format("\tlabel = \"%s\";", label)).append(CRLF);
-				modelContent.append(String.format("\tschema = %sSchema;", entityName)).append(CRLF);
-				modelContent.append(String.format("\tendpoints = getEndpoints(%sSchema, \"%s\");", entityName, this.baseUrl))
-						.append(CRLF);
-				refSchemas.append("\trefSchemas = [");
+				modelContent.append(String.format("\texport const label = \"%s\";", label)).append(CRLF);
 
 				FormFields formFields = new FormFields();
 				for (Entry<String, CustomFieldTemplate> entry : fields.entrySet()) {
@@ -380,22 +377,33 @@ public class GenerateWebAppScript extends Script {
 						refSchemaCodes.addAll(iterateRefSchemas(fieldEntityCode, refSchemaCodes));
 					}
 				}
+				fieldContents.append(formFields);
+				modelContent.append(fieldContents);
 
+				String classDefinition = String.format("export class ModelClass extends Model {");
+				modelContent.append(classDefinition).append(CRLF);
+				modelContent.append(String.format("\tname = \"%sEntity\";", entityName)).append(CRLF);
+				modelContent.append(String.format("\tschemaCode = \"%s\";", entityName));
+				refSchemas.append("\trefSchemaCodes = [");
 				refSchemas.append(refSchemaCodes.isEmpty() ? "" : CRLF);
 
 				for (String refSchemaCode : refSchemaCodes) {
-					String modelImport = String.format(IMPORT_STATEMENT, refSchemaCode, this.baseUrl, SCHEMA_URL, refSchemaCode);
-					modelImports.append(modelImport).append(CRLF);
-					String refSchema = String.format("\t\t%sSchema,", refSchemaCode);
+					String refSchema = String.format("\t\t\"%s\",", refSchemaCode);
 					refSchemas.append(refSchema).append(CRLF);
 				}
-				fieldContents.append(formFields);
 				refSchemas.append("\t];").append(CRLF);
+
+				ctorContents.append("\tconstructor(auth){").append(CRLF);
+				ctorContents.append("\t\tsuper(auth);").append(CRLF);
+				ctorContents.append("\t\tthis.code = code;").append(CRLF);
+				ctorContents.append("\t\tthis.label = label;").append(CRLF);
+				ctorContents.append("\t\tthis.formFields = formFields;").append(CRLF);
+				ctorContents.append("\t}").append(CRLF);
 
 				try {
 					File outputFile = new File(destinationName);
 					StringBuilder fullContent = new StringBuilder(modelImports).append(CRLF).append(modelContent).append(CRLF)
-							.append(refSchemas).append(CRLF).append(fieldContents).append("}").append(CRLF);
+							.append(refSchemas).append(CRLF).append(ctorContents).append(CRLF).append("}").append(CRLF);
 					FileUtils.write(outputFile, fullContent, StandardCharsets.UTF_8);
 					files.add(outputFile);
 				} catch (IOException e) {
@@ -405,18 +413,14 @@ public class GenerateWebAppScript extends Script {
 		} else if (source.contains(INDEX_TEMPLATE)) {
 			String destination = transformer.getDestination().toString();
 			StringBuilder modelIndexImports = new StringBuilder();
-			StringBuilder modelIndexExports = new StringBuilder();
 
 			List<String> entitiesToExport = new ArrayList<>();
 			for (String entityCode : transformer.getEntityCodes()) {
-				String modelImport = String.format("import %s from \"./%s.js\";", entityCode, entityCode);
+				String modelImport = String.format("import * as %s from \"./%s.js\";", entityCode, entityCode);
 				modelIndexImports.append(modelImport).append(CRLF);
-				String modelExport = String.format("export const %sEntity = new %s();", entityCode, entityCode);
-				modelIndexExports.append(modelExport).append(CRLF);
-				entitiesToExport.add(String.format("%sEntity", entityCode));
+				entitiesToExport.add(String.format("%s", entityCode));
 			}
-			modelIndexImports.append(CRLF).append(modelIndexExports);
-			modelIndexImports.append(CRLF).append("export const ENTITIES = [ ").append(String.join(", ", entitiesToExport))
+			modelIndexImports.append(CRLF).append("export const MODELS = [ ").append(String.join(", ", entitiesToExport))
 					.append(" ];").append(CRLF);
 
 			try {
@@ -565,7 +569,7 @@ class FormFields {
 
 	@Override
 	public String toString() {
-		String prefix = "\tformFields = [" + CRLF;
+		String prefix = "\texport const formFields = [" + CRLF;
 		String suffix = CRLF + "\t];" + CRLF;
 		return this.groups.stream().sorted().map(FieldGroup::toString).collect(Collectors.joining(CRLF, prefix, suffix));
 	}
