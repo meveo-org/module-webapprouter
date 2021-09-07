@@ -62,13 +62,13 @@ public class GenerateWebAppScript extends Script {
 	private static final String MEVEO_BRANCH = "meveo";
 	private static final String MV_TEMPLATE_REPO = "https://github.com/meveo-org/mv-template.git";
 	private static final String LOG_SEPARATOR = "***********************************************************";
-	private static final String SCHEMA_URL = "api/rest/entityCustomization/entity/schema";
 	private static final String CUSTOM_TEMPLATE = CustomEntityTemplate.class.getName();
 	private static final String WEB_APP_TEMPLATE = WebApplication.class.getSimpleName();
-	private static final String IMPORT_STATEMENT = "import %sSchema from \"%s/%s/%s\";";
 	private static final String PARENT = "Parent";
 	private static final String PAGE_TEMPLATE = "Parent.js";
 	private static final String INDEX_TEMPLATE = "index.js";
+	private static final String LOCALHOST = "http://localhost:8080";
+	private static final String KEYCLOAK_URL = "http://host.docker.internal:8081";
 	private static final Logger LOG = LoggerFactory.getLogger(GenerateWebAppScript.class);
 	private String CRLF = WebAppScriptHelper.CRLF;
 	private String baseUrl = null;
@@ -119,7 +119,7 @@ public class GenerateWebAppScript extends Script {
 		MeveoUser user = (MeveoUser) parameters.get(CONTEXT_CURRENT_USER);
 		this.baseUrl = (String) parameters.get(APP_BASE_URL);
 		if (this.baseUrl == null) {
-			this.baseUrl = "http://localhost:8080/";
+			this.baseUrl = LOCALHOST + "/";
 		}
 
 		ParamBean appConfig = paramBeanFactory.getInstance();
@@ -221,31 +221,35 @@ public class GenerateWebAppScript extends Script {
 					File sourceFile = sourcePath.toFile();
 					File destinationFile = destinationPath.toFile();
 					boolean isGitConfigFile = sourcePath.toString().contains("/.git/");
-					boolean isModelDirectory = sourcePath.toString().contains("/" + WEB_APP_TEMPLATE + "/model/");
+					boolean isModelDirectory = sourcePath.toString().contains("/model/");
 					boolean isModelFile = sourcePath.toString().contains("/model/model.js");
+					boolean isConfigFile = sourcePath.toString().contains("/config.js");
+					boolean isKeycloakFile = sourcePath.toString().contains("/keycloak.json");
 					boolean isParentFile = sourcePath.toString().contains("/pages/Parent");
 					boolean isChildFile = sourcePath.toString().contains("/pages/Child");
 					boolean isTopbar = sourcePath.toString().contains("/components/layout/TopbarMenu.js");
+					String serverUrl = (String) parameters.get(APP_BASE_URL);
 
 					// COPY SPECIFIC FILES ONLY
 					if (!sourceFile.isDirectory()) {
 						FileTransformer transformer = new FileTransformer(sourcePath, destinationPath, entityCodes);
 						if (isParentFile) {
 							filesToCommit.addAll(this.generatePages(transformer));
-						} else if (isModelFile) {
-							Files.copy(sourcePath, destinationPath, REPLACE_EXISTING, COPY_ATTRIBUTES);
-							filesToCommit.add(destinationFile);
-						} else if (isModelDirectory) {
-							filesToCommit.addAll(this.generateModels(transformer));
+						} else if (isConfigFile) {
+							filesToCommit.add(this.searchAndReplace(sourceFile, destinationFile, LOCALHOST, serverUrl));
+						} else if (isKeycloakFile) {
+							filesToCommit.add(this.searchAndReplace(sourceFile, destinationFile, KEYCLOAK_URL, serverUrl));
 						} else if (isTopbar) {
 							FileTransformer dashboardTransformer = new FileTransformer(sourcePath, destinationPath,
 									Arrays.asList(moduleCode));
 							List<Substitute> substitutes = new ArrayList<>();
 							substitutes.add(new Substitute("Custom Entities", "%s", WebAppScriptHelper.TITLE));
 							filesToCommit.addAll(dashboardTransformer.generateFiles(substitutes));
-						} else if (!isGitConfigFile && !isChildFile) {
+						} else if ((!isGitConfigFile && !isChildFile) || isModelFile) {
 							Files.copy(sourcePath, destinationPath, REPLACE_EXISTING, COPY_ATTRIBUTES);
 							filesToCommit.add(destinationFile);
+						} else if (isModelDirectory) {
+							filesToCommit.addAll(this.generateModels(transformer));
 						}
 					} else if (!isGitConfigFile && !isChildFile && !isParentFile && !destinationFile.exists()) {
 						Files.createDirectory(destinationPath);
@@ -275,6 +279,20 @@ public class GenerateWebAppScript extends Script {
 			}
 		}
 		LOG.debug("END - GenerateWebAppScript.execute()");
+	}
+
+	private File searchAndReplace(File sourceFile, File destinationFile, String stringToReplace, String replacement)
+			throws BusinessException {
+		StringWriter writer = new StringWriter();
+		try {
+			IOUtils.copy(new InputStreamReader(new FileInputStream(sourceFile)), writer);
+			String fileContent = writer.toString();
+			String outputContent = fileContent.replace(stringToReplace, replacement);
+			FileUtils.write(destinationFile, outputContent, StandardCharsets.UTF_8);
+		} catch (IOException e) {
+			throw new BusinessException("Failed while trying to replace string: " + e.getMessage());
+		}
+		return destinationFile;
 	}
 
 	private List<File> generatePages(FileTransformer transformer) throws BusinessException {
