@@ -67,8 +67,8 @@ public class GenerateWebAppScript extends Script {
 	private static final String PARENT = "Parent";
 	private static final String PAGE_TEMPLATE = "Parent.js";
 	private static final String INDEX_TEMPLATE = "index.js";
-	private static final String LOCALHOST = "http://localhost:8080";
-	private static final String KEYCLOAK_URL = "http://host.docker.internal:8081";
+	private static final String LOCALHOST = "http://localhost:8080/";
+	private static final String KEYCLOAK_URL = "http://host.docker.internal:8081/";
 	private static final Logger LOG = LoggerFactory.getLogger(GenerateWebAppScript.class);
 	private String CRLF = WebAppScriptHelper.CRLF;
 	private String baseUrl = null;
@@ -117,16 +117,18 @@ public class GenerateWebAppScript extends Script {
 		}
 
 		MeveoUser user = (MeveoUser) parameters.get(CONTEXT_CURRENT_USER);
-		this.baseUrl = (String) parameters.get(APP_BASE_URL);
-		if (this.baseUrl == null) {
-			this.baseUrl = LOCALHOST + "/";
-		}
-
+		
 		ParamBean appConfig = paramBeanFactory.getInstance();
 		String remoteUrl = appConfig.getProperty("meveo.git.directory.remote.url", null);
 		String remoteUsername = appConfig.getProperty("meveo.git.directory.remote.username", null);
 		String remotePassword = appConfig.getProperty("meveo.git.directory.remote.password", null);
 		String appContext = appConfig.getProperty("meveo.moduleName", "");
+		String serverUrl = appConfig.getProperty("meveo.admin.baseUrl", null);
+
+		this.baseUrl = serverUrl;
+		if (this.baseUrl == null) {
+			this.baseUrl = LOCALHOST;
+		}
 
 		this.baseUrl = this.baseUrl + appContext;
 
@@ -228,16 +230,15 @@ public class GenerateWebAppScript extends Script {
 					boolean isParentFile = sourcePath.toString().contains("/pages/Parent");
 					boolean isChildFile = sourcePath.toString().contains("/pages/Child");
 					boolean isTopbar = sourcePath.toString().contains("/components/layout/TopbarMenu.js");
-					String serverUrl = (String) parameters.get(APP_BASE_URL);
-
+					
 					// COPY SPECIFIC FILES ONLY
 					if (!sourceFile.isDirectory()) {
 						FileTransformer transformer = new FileTransformer(sourcePath, destinationPath, entityCodes);
 						if (isParentFile) {
 							filesToCommit.addAll(this.generatePages(transformer));
-						} else if (isConfigFile) {
+						} else if (isConfigFile && serverUrl != null) {
 							filesToCommit.add(this.searchAndReplace(sourceFile, destinationFile, LOCALHOST, serverUrl));
-						} else if (isKeycloakFile) {
+						} else if (isKeycloakFile && serverUrl != null) {
 							filesToCommit.add(this.searchAndReplace(sourceFile, destinationFile, KEYCLOAK_URL, serverUrl));
 						} else if (isTopbar) {
 							FileTransformer dashboardTransformer = new FileTransformer(sourcePath, destinationPath,
@@ -284,6 +285,10 @@ public class GenerateWebAppScript extends Script {
 	private File searchAndReplace(File sourceFile, File destinationFile, String stringToReplace, String replacement)
 			throws BusinessException {
 		StringWriter writer = new StringWriter();
+		LOG.debug("sourceFile: {}", sourceFile);
+		LOG.debug("destinationFile: {}", destinationFile);
+		LOG.debug("stringToReplace: {}", stringToReplace);
+		LOG.debug("replacement: {}", replacement);
 		try {
 			IOUtils.copy(new InputStreamReader(new FileInputStream(sourceFile)), writer);
 			String fileContent = writer.toString();
