@@ -69,6 +69,7 @@ public class GenerateWebAppScript extends Script {
 	private static final String INDEX_TEMPLATE = "index.js";
 	private static final String LOCALHOST = "http://localhost:8080/";
 	private static final String KEYCLOAK_URL = "http://host.docker.internal:8081/";
+	private static final String AFFIX = "-UI";
 	private static final Logger LOG = LoggerFactory.getLogger(GenerateWebAppScript.class);
 	private String CRLF = WebAppScriptHelper.CRLF;
 	private String baseUrl = null;
@@ -159,7 +160,7 @@ public class GenerateWebAppScript extends Script {
 			}
 			try {
 				cfiService.setCFValue(webApplicationCEI, "code", moduleCode);
-				cfiService.setCFValue(webApplicationCEI, "ROOT_PATH", "/git/" + moduleCode);
+				cfiService.setCFValue(webApplicationCEI, "ROOT_PATH", "/git/" + moduleCode + AFFIX);
 				cfiService.setCFValue(webApplicationCEI, "entities", entityCodes);
 				cfiService.setCFValue(webApplicationCEI, "label", WebAppScriptHelper.toTitleName(moduleCode));
 				crossStorageService.createOrUpdate(getDefaultRepository(), webApplicationCEI);
@@ -205,7 +206,7 @@ public class GenerateWebAppScript extends Script {
 			String moduleWebAppBranch = gitClient.currentBranch(moduleWebAppRepo);
 			LOG.debug("moduleWebApp branch: {}", moduleWebAppBranch);
 
-			File moduleWebAppDirectory = GitHelper.getRepositoryDir(user, moduleCode);
+			File moduleWebAppDirectory = GitHelper.getRepositoryDir(user, moduleCode + AFFIX);
 			Path moduleWebAppPath = moduleWebAppDirectory.toPath();
 
 			LOG.debug("moduleWebApp path: {}", moduleWebAppPath.toString());
