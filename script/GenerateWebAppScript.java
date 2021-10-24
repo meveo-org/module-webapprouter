@@ -90,16 +90,18 @@ public class GenerateWebAppScript extends Script {
 	private CrossStorageApi crossStorageApi = getCDIBean(CrossStorageApi.class);
 
 	private Repository repository;
-	private MeveoModule module = null;
+    private String moduleCode;
 
-	public MeveoModule getModule() {
-		return this.module;
+	public String getModuleCode() {
+		return this.moduleCode;
 	}
 
-	public void setModule(MeveoModule module) {
-		this.module = module;
+	public void setModuleCode(String moduleCode) {
+		this.moduleCode = moduleCode;
 	}
 
+  
+  
 	public Repository getDefaultRepository() {
 		if (repository == null) {
 			repository = repositoryService.findDefaultRepository();
@@ -111,17 +113,12 @@ public class GenerateWebAppScript extends Script {
 	public void execute(Map<String, Object> parameters) throws BusinessException {
 		LOG.debug("START - GenerateWebAppScript.execute()");
 		super.execute(parameters);
-		if (module == null) {
-			module = (MeveoModule) parameters.get("module");
-		}
-		LOG.debug("module: {}", module);
-		String moduleCode = module.getCode();
 		LOG.debug("moduleCode: {}", moduleCode);
-		// this is only used when code is manually overridden
-		if (module == null && moduleCode != null) {
-			module = meveoModuleService.findByCode(moduleCode);
+		if(moduleCode == null){
+			throw new BusinessException("moduleCode not set");
 		}
-
+		MeveoModule module = meveoModuleService.findByCode(moduleCode);
+		
 		MeveoUser user = (MeveoUser) parameters.get(CONTEXT_CURRENT_USER);
 
 		ParamBean appConfig = paramBeanFactory.getInstance();
@@ -170,6 +167,7 @@ public class GenerateWebAppScript extends Script {
 			try {
 				cfiService.setCFValue(webApplicationCEI, "code", moduleCode);
 				cfiService.setCFValue(webApplicationCEI, "ROOT_PATH", "/git/" + moduleCode + AFFIX);
+				cfiService.setCFValue(webApplicationCEI, "BASE_URL", "/meveo/rest/webapp/" + moduleCode);
 				cfiService.setCFValue(webApplicationCEI, "entities", entityCodes);
 				cfiService.setCFValue(webApplicationCEI, "label",
 						WebAppScriptHelper.toTitleName(moduleCode));
@@ -200,11 +198,11 @@ public class GenerateWebAppScript extends Script {
 			LOG.debug("webappTemplate path: {}", webappTemplatePath.toString());
 
 			// COPY TEMPLATE INTO A SEPARATE MODULE DIRECTORY
-			GitRepository moduleWebAppRepo = gitRepositoryService.findByCode(moduleCode);
+			GitRepository moduleWebAppRepo = gitRepositoryService.findByCode(moduleCode + AFFIX);
 
 			if (moduleWebAppRepo == null) {
 				moduleWebAppRepo = new GitRepository();
-				moduleWebAppRepo.setCode(moduleCode);
+				moduleWebAppRepo.setCode(moduleCode + AFFIX);
 				moduleWebAppRepo
 						.setDescription(WebAppScriptHelper.toTitleName(moduleCode) + " Template repository");
 				moduleWebAppRepo.setRemoteOrigin(remoteUrl);
@@ -440,10 +438,10 @@ public class GenerateWebAppScript extends Script {
 				Set<String> refSchemaCodes = new HashSet();
 
 				modelImports.append("import Model from \"./model.js\";").append(CRLF);
-				modelContent.append(String.format("\texport const code = \"%s\";", entityName))
+				modelContent.append(String.format("export const code = \"%s\";", entityName))
 						.append(CRLF);
 				String label = WebAppScriptHelper.toTitleName(entityCode);
-				modelContent.append(String.format("\texport const label = \"%s\";", label)).append(CRLF);
+				modelContent.append(String.format("export const label = \"%s\";", label)).append(CRLF);
 
 				FormFields formFields = new FormFields();
 				for (Entry<String, CustomFieldTemplate> entry : fields.entrySet()) {
@@ -460,7 +458,6 @@ public class GenerateWebAppScript extends Script {
 
 				String classDefinition = String.format("export class ModelClass extends Model {");
 				modelContent.append(classDefinition).append(CRLF);
-				modelContent.append(String.format("\tname = \"%sEntity\";", entityName)).append(CRLF);
 				modelContent.append(String.format("\tschemaCode = \"%s\";", entityName));
 				refSchemas.append("\trefSchemaCodes = [");
 				refSchemas.append(refSchemaCodes.isEmpty() ? "" : CRLF);
@@ -657,8 +654,8 @@ class FormFields {
 
 	@Override
 	public String toString() {
-		String prefix = "\texport const formFields = [" + CRLF;
-		String suffix = CRLF + "\t];" + CRLF;
+		String prefix = "export const formFields = [" + CRLF;
+		String suffix = CRLF + "];" + CRLF;
 		return this.groups.stream().sorted().map(FieldGroup::toString)
 				.collect(Collectors.joining(CRLF, prefix, suffix));
 	}
@@ -736,13 +733,13 @@ class FieldGroup implements Comparable<FieldGroup> {
 
 	@Override
 	public String toString() {
-		StringBuilder content = new StringBuilder("\t\t{").append(CRLF).append("\t\t\tlabel: \"")
+		StringBuilder content = new StringBuilder("\t{").append(CRLF).append("\t\t\tlabel: \"")
 				.append(this.name)
-				.append("\",").append(CRLF).append("\t\t\tfields: [").append(CRLF)
+				.append("\",").append(CRLF).append("\t\tfields: [").append(CRLF)
 				.append(
 						this.fields.stream().sorted().map(Field::toString).collect(Collectors.joining(CRLF)))
 				.append(CRLF)
-				.append("\t\t\t]").append(CRLF).append("\t\t},").append(CRLF);
+				.append("\t\t]").append(CRLF).append("\t},").append(CRLF);
 		return content.toString();
 	}
 }
@@ -848,7 +845,7 @@ class Field implements Comparable<Field> {
 			fields.put("displayFormat", displayFormat);
 		}
 
-		fieldContents.append("\t\t\t\t").append(JacksonUtil.toString(fields)).append(",");
+		fieldContents.append("\t\t\t").append(JacksonUtil.toString(fields)).append(",");
 		return fieldContents.toString();
 	}
 }
