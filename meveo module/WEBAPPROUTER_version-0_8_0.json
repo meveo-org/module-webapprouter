@@ -64,8 +64,8 @@
         "summary" : false,
         "audited" : false,
         "persisted" : true,
-        "filter" : false,
         "unique" : false,
+        "filter" : false,
         "matrixColumns" : [ ]
       }, {
         "code" : "ROOT_PATH",
@@ -92,8 +92,8 @@
         "summary" : false,
         "audited" : false,
         "persisted" : true,
-        "filter" : false,
         "unique" : false,
+        "filter" : false,
         "matrixColumns" : [ ]
       }, {
         "code" : "code",
@@ -120,8 +120,8 @@
         "summary" : true,
         "audited" : false,
         "persisted" : true,
-        "filter" : true,
         "unique" : false,
+        "filter" : true,
         "matrixColumns" : [ ]
       }, {
         "code" : "entities",
@@ -148,8 +148,8 @@
         "summary" : false,
         "audited" : false,
         "persisted" : true,
-        "filter" : false,
         "unique" : false,
+        "filter" : false,
         "matrixColumns" : [ ]
       }, {
         "code" : "label",
@@ -176,8 +176,8 @@
         "summary" : true,
         "audited" : false,
         "persisted" : true,
-        "filter" : false,
         "unique" : false,
+        "filter" : false,
         "matrixColumns" : [ ]
       } ],
       "actions" : [ {
@@ -195,6 +195,17 @@
     "dtoData" : {
       "code" : "APPS",
       "name" : "Apps"
+    }
+  }, {
+    "dtoClassName" : "org.meveo.api.dto.EntityCustomActionDto",
+    "dtoData" : {
+      "code" : "generateWebapp",
+      "description" : "Generate WebApp",
+      "appliesTo" : "CE_WebApplication",
+      "label" : "Generate Web app",
+      "script" : "org.meveo.script.GenerateWebAppScript",
+      "applicableToEntityList" : false,
+      "applicableToEntityInstance" : true
     }
   }, {
     "dtoClassName" : "org.meveo.api.dto.ScriptInstanceDto",
