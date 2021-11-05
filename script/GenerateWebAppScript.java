@@ -35,12 +35,14 @@ import org.meveo.commons.utils.ParamBean;
 import org.meveo.commons.utils.ParamBeanFactory;
 import org.meveo.model.crm.CustomFieldTemplate;
 import org.meveo.model.crm.custom.CustomFieldTypeEnum;
+import org.meveo.model.crm.custom.EntityCustomAction;
 import org.meveo.model.customEntities.CustomEntityInstance;
 import org.meveo.model.customEntities.CustomEntityTemplate;
 import org.meveo.model.customEntities.WebApplication;
 import org.meveo.model.git.GitRepository;
 import org.meveo.model.module.MeveoModule;
 import org.meveo.model.module.MeveoModuleItem;
+import org.meveo.model.persistence.JacksonUtil;
 import org.meveo.model.storage.Repository;
 import org.meveo.persistence.CrossStorageService;
 import org.meveo.security.MeveoUser;
@@ -48,10 +50,10 @@ import org.meveo.service.admin.impl.MeveoModuleService;
 import org.meveo.service.crm.impl.CustomFieldInstanceService;
 import org.meveo.service.crm.impl.CustomFieldTemplateService;
 import org.meveo.service.custom.CustomEntityTemplateService;
+import org.meveo.service.custom.EntityCustomActionService;
 import org.meveo.service.git.GitClient;
 import org.meveo.service.git.GitHelper;
 import org.meveo.service.git.GitRepositoryService;
-import org.meveo.model.persistence.JacksonUtil;
 import org.meveo.service.script.Script;
 import org.meveo.service.storage.RepositoryService;
 
@@ -82,6 +84,7 @@ public class GenerateWebAppScript extends Script {
 	private CustomEntityTemplateService cetService = getCDIBean(CustomEntityTemplateService.class);
 	private CustomFieldInstanceService cfiService = getCDIBean(CustomFieldInstanceService.class);
 	private CustomFieldTemplateService cftService = getCDIBean(CustomFieldTemplateService.class);
+	private EntityCustomActionService ecaService = getCDIBean(EntityCustomActionService.class);
 	private GitClient gitClient = getCDIBean(GitClient.class);
 	private GitRepositoryService gitRepositoryService = getCDIBean(GitRepositoryService.class);
 	private MeveoModuleService meveoModuleService = getCDIBean(MeveoModuleService.class);
@@ -90,7 +93,7 @@ public class GenerateWebAppScript extends Script {
 	private CrossStorageApi crossStorageApi = getCDIBean(CrossStorageApi.class);
 
 	private Repository repository;
-    private String moduleCode;
+	private String moduleCode;
 
 	public String getModuleCode() {
 		return this.moduleCode;
@@ -100,8 +103,6 @@ public class GenerateWebAppScript extends Script {
 		this.moduleCode = moduleCode;
 	}
 
-  
-  
 	public Repository getDefaultRepository() {
 		if (repository == null) {
 			repository = repositoryService.findDefaultRepository();
@@ -114,11 +115,11 @@ public class GenerateWebAppScript extends Script {
 		LOG.debug("START - GenerateWebAppScript.execute()");
 		super.execute(parameters);
 		LOG.debug("moduleCode: {}", moduleCode);
-		if(moduleCode == null){
+		if (moduleCode == null) {
 			throw new BusinessException("moduleCode not set");
 		}
 		MeveoModule module = meveoModuleService.findByCode(moduleCode);
-		
+
 		MeveoUser user = (MeveoUser) parameters.get(CONTEXT_CURRENT_USER);
 
 		ParamBean appConfig = paramBeanFactory.getInstance();
@@ -431,10 +432,13 @@ public class GenerateWebAppScript extends Script {
 				StringBuilder modelContent = new StringBuilder();
 				StringBuilder refSchemas = new StringBuilder();
 				StringBuilder fieldContents = new StringBuilder();
+				StringBuilder actionContents = new StringBuilder();
 				StringBuilder ctorContents = new StringBuilder();
 				CustomEntityTemplate entityTemplate = cetService.findByCodeOrDbTablename(entityCode);
 				Map<String, CustomFieldTemplate> fields =
 						cftService.findByAppliesTo(entityTemplate.getAppliesTo());
+				Map<String, EntityCustomAction> actions =
+						ecaService.findByAppliesTo(entityTemplate.getAppliesTo());
 				Set<String> refSchemaCodes = new HashSet();
 
 				modelImports.append("import Model from \"./model.js\";").append(CRLF);
@@ -453,8 +457,17 @@ public class GenerateWebAppScript extends Script {
 						refSchemaCodes.addAll(iterateRefSchemas(fieldEntityCode, refSchemaCodes));
 					}
 				}
+
 				fieldContents.append(formFields);
 				modelContent.append(fieldContents);
+
+				EntityActions entityActions = new EntityActions();
+				for (Entry<String, EntityCustomAction> entry : actions.entrySet()) {
+					entityActions.add(entry.getValue());
+				}
+
+				actionContents.append(entityActions);
+				modelContent.append(actionContents);
 
 				String classDefinition = String.format("export class ModelClass extends Model {");
 				modelContent.append(classDefinition).append(CRLF);
@@ -473,6 +486,7 @@ public class GenerateWebAppScript extends Script {
 				ctorContents.append("\t\tthis.code = code;").append(CRLF);
 				ctorContents.append("\t\tthis.label = label;").append(CRLF);
 				ctorContents.append("\t\tthis.formFields = formFields;").append(CRLF);
+				ctorContents.append("\t\tthis.actions = actions;").append(CRLF);
 				ctorContents.append("\t}").append(CRLF);
 
 				try {
@@ -733,7 +747,7 @@ class FieldGroup implements Comparable<FieldGroup> {
 
 	@Override
 	public String toString() {
-		StringBuilder content = new StringBuilder("\t{").append(CRLF).append("\t\t\tlabel: \"")
+		StringBuilder content = new StringBuilder("\t{").append(CRLF).append("\t\tlabel: \"")
 				.append(this.name)
 				.append("\",").append(CRLF).append("\t\tfields: [").append(CRLF)
 				.append(
@@ -847,6 +861,112 @@ class Field implements Comparable<Field> {
 
 		fieldContents.append("\t\t\t").append(JacksonUtil.toString(fields)).append(",");
 		return fieldContents.toString();
+	}
+}
+
+
+class EntityActions {
+	private static final Logger LOG = LoggerFactory.getLogger(EntityActions.class);
+	private String CRLF = WebAppScriptHelper.CRLF;
+	private Set<Action> actions;
+
+	public EntityActions() {
+		this.actions = new HashSet<>();
+	}
+
+	public void add(EntityCustomAction customAction) {
+		this.actions.add(new Action(customAction));
+	}
+
+	@Override
+	public String toString() {
+		String prefix = "export const actions = [" + CRLF;
+		String suffix = CRLF + "];" + CRLF;
+		return this.actions.stream().sorted().map(Action::toString)
+				.collect(Collectors.joining(CRLF, prefix, suffix));
+	}
+}
+
+
+class Action implements Comparable<Action> {
+	private static final Logger LOG = LoggerFactory.getLogger(Action.class);
+	private int index;
+	private String label;
+	private EntityCustomAction customAction;
+
+	public Action(EntityCustomAction customAction) {
+		this.customAction = customAction;
+		Map<String, String> guiPosition = customAction.getGuiPositionParsed();
+		LOG.debug("guiPosition: {}", customAction.getGuiPosition());
+		if (guiPosition != null && guiPosition.size() > 0) {
+			this.index = Integer.parseInt(guiPosition.get("field_pos"));
+		} else {
+			this.index = 0;
+		}
+	}
+
+	public int getIndex() {
+		return index;
+	}
+
+	public void setIndex(int index) {
+		this.index = index;
+	}
+
+	public String getLabel() {
+		return label;
+	}
+
+	public void setLabel(String label) {
+		this.label = label;
+	}
+
+	public EntityCustomAction getCustomAction() {
+		return customAction;
+	}
+
+	public void setCustomAction(EntityCustomAction customAction) {
+		this.customAction = customAction;
+	}
+
+	@Override
+	public int compareTo(Action o) {
+		return this.getIndex() - o.getIndex();
+	}
+
+	@Override
+	public boolean equals(Object o) {
+		if (o == this)
+			return true;
+		if (!(o instanceof Action)) {
+			return false;
+		}
+		Action action = (Action) o;
+		return this.getIndex() == action.getIndex()
+				&& Objects.equals(this.getLabel(), action.getLabel());
+	}
+
+	@Override
+	public int hashCode() {
+		return Objects.hash(this.index, this.label);
+	}
+
+	@Override
+	public String toString() {
+		StringBuilder actionDetails = new StringBuilder();
+		Map<String, Object> action = new HashMap<>();
+		action.put("applicableOnEl", customAction.getApplicableOnEl());
+		action.put("applicableToEntityInstance", customAction.getApplicableToEntityInstance());
+		action.put("applicableToEntityList", customAction.getApplicableToEntityList());
+		action.put("appliesTo", customAction.getAppliesTo());
+		action.put("guiPosition", customAction.getGuiPosition());
+		action.put("guiPositionParsed", customAction.getGuiPositionParsed());
+		action.put("label", customAction.getLabel());
+		action.put("labelI18nNullSafe", customAction.getLabelI18nNullSafe());
+		action.put("script", customAction.getScript().getCode());
+		action.put("scriptParameters", customAction.getScriptParameters());
+		actionDetails.append("\t").append(JacksonUtil.toString(action)).append(",");
+		return actionDetails.toString();
 	}
 }
 
