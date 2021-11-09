@@ -955,6 +955,7 @@ class Action implements Comparable<Action> {
 	public String toString() {
 		StringBuilder actionDetails = new StringBuilder();
 		Map<String, Object> action = new HashMap<>();
+		action.put("code", customAction.getCode());
 		action.put("applicableOnEl", customAction.getApplicableOnEl());
 		action.put("applicableToEntityInstance", customAction.getApplicableToEntityInstance());
 		action.put("applicableToEntityList", customAction.getApplicableToEntityList());
