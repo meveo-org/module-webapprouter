@@ -1,7 +1,9 @@
 package org.meveo.script;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.List;
 import org.meveo.admin.exception.BusinessException;
 import org.meveo.api.exception.EntityDoesNotExistsException;
 import org.meveo.elresolver.ELException;
@@ -35,7 +37,7 @@ public class RunCustomAction extends Script {
 
   private Repository repository;
   private String actionCode;
-  private String entityCode;
+  private List<String> entityCodes;
   private String uuid;
   private Map<String, Object> result;
 
@@ -47,12 +49,12 @@ public class RunCustomAction extends Script {
     this.actionCode = actionCode;
   }
 
-  public String getEntityCode() {
-    return entityCode;
+  public List<String> getEntityCodes() {
+    return entityCodes;
   }
 
-  public void setEntityCode(String entityCode) {
-    this.entityCode = entityCode;
+  public void setEntityCodes(List<String> entityCodes) {
+    this.entityCodes = entityCodes;
   }
 
   public String getUuid() {
@@ -77,7 +79,7 @@ public class RunCustomAction extends Script {
   RunCustomAction() {
     super();
     this.actionCode = "";
-    this.entityCode = "";
+    this.entityCodes = null;
     this.uuid = "";
     this.result = new HashMap<>();
   }
@@ -85,67 +87,76 @@ public class RunCustomAction extends Script {
   @Override
   public void execute(Map<String, Object> parameters) throws BusinessException {
     super.execute(parameters);
-    try {
-      CustomEntityTemplate entityTemplate = cetService.findByCodeOrDbTablename(this.entityCode);
-      Map<String, Object> entity = crossStorageService
-          .find(this.getDefaultRepository(), entityTemplate, this.uuid, true);
-      if (entity == null) {
-        throw new BusinessException(
-            "Entity not found. CET: " + this.entityCode + " UUID: " + this.uuid);
-      }
-      LOG.debug("entity: {}", entity);
-      LOG.debug("parameters: {}", parameters);
-      LOG.debug("this.actionCode: {}", this.actionCode);
-      LOG.debug("this.entityCode: {}", this.entityCode);
-      LOG.debug("this.uuid: {}", this.uuid);
-
-      EntityCustomAction action = ecaService.findByCode(this.actionCode);
-      if (action == null) {
-        throw new BusinessException("Action not found: " + this.actionCode);
-      }
-      Map<String, Object> context = new HashMap<>();
-      context.put(Script.CONTEXT_ACTION, this.actionCode);
-      Map<Object, Object> elContext = new HashMap<>(context);
-      elContext.put("entity", entity);
-
-      LOG.debug("action: {}", action);
-      LOG.debug("context: {}", context);
-      LOG.debug("elContext: {}", elContext);
-
-      action.getScriptParameters().forEach((key, value) -> {
-        try {
-          context.put(key, MeveoValueExpressionWrapper
-              .evaluateExpression(value, elContext, Object.class));
-        } catch (ELException e) {
-          LOG.error("Failed to evaluate el for custom action", e);
-        }
-      });
-
-      Map<String, Object> scriptResult = scriptInstanceService
-          .execute(
-              (IEntity) CEIUtils.pojoToCei(entity),
-              this.getDefaultRepository(),
-              action.getScript().getCode(),
-              context);
-
-      // Display a message accordingly on what is set in result
-      if (scriptResult.containsKey(Script.RESULT_GUI_MESSAGE_KEY)) {
-        result.put(MESSAGE, (String) result.get(Script.RESULT_GUI_MESSAGE_KEY));
-      } else if (scriptResult.containsKey(Script.RESULT_GUI_MESSAGE)) {
-        result.put(MESSAGE, (String) result.get(Script.RESULT_GUI_MESSAGE));
-      } else {
-        result.put(MESSAGE, "Action executed successfully");
-      }
-
-      if (scriptResult.containsKey(Script.RESULT_GUI_OUTCOME)) {
-        result.put("value", (String) result.get(Script.RESULT_GUI_OUTCOME));
-      }
-
-      LOG.info(action.getLabel() + " executed successfully");
-
-    } catch (BusinessException | EntityDoesNotExistsException e) {
-      LOG.error("Failed to execute a script {} on entity {}", this.actionCode, this.entityCode, e);
+    LOG.debug("parameters: {}", parameters);
+    if (this.entityCodes == null) {
+      throw new BusinessException(
+          "No entity codes specified. Please specify at least one entity code in the parameters.");
     }
+    for (String entityCode : this.entityCodes) {
+      Map<String, Object> singleResult = new HashMap<>();
+      try {
+        CustomEntityTemplate entityTemplate = cetService.findByCodeOrDbTablename(entityCode);
+        Map<String, Object> entity = crossStorageService
+            .find(this.getDefaultRepository(), entityTemplate, this.uuid, true);
+        if (entity == null) {
+          throw new BusinessException(
+              "Entity not found. CET: " + entityCode + " UUID: " + this.uuid);
+        }
+        LOG.debug("entity: {}", entity);
+        LOG.debug("this.actionCode: {}", this.actionCode);
+        LOG.debug("this.entityCodes: {}", this.entityCodes);
+        LOG.debug("this.uuid: {}", this.uuid);
 
+        EntityCustomAction action = ecaService.findByCode(this.actionCode);
+        if (action == null) {
+          throw new BusinessException("Action not found: " + this.actionCode);
+        }
+        Map<String, Object> context = new HashMap<>();
+        context.put(Script.CONTEXT_ACTION, this.actionCode);
+        Map<Object, Object> elContext = new HashMap<>(context);
+        elContext.put("entity", entity);
+
+        LOG.debug("action: {}", action);
+        LOG.debug("context: {}", context);
+        LOG.debug("elContext: {}", elContext);
+
+        action.getScriptParameters().forEach((key, value) -> {
+          try {
+            context.put(key, MeveoValueExpressionWrapper
+                .evaluateExpression(value, elContext, Object.class));
+          } catch (ELException e) {
+            LOG.error("Failed to evaluate el for custom action", e);
+          }
+        });
+
+        Map<String, Object> scriptResult = scriptInstanceService
+            .execute(
+                (IEntity) CEIUtils.pojoToCei(entity),
+                this.getDefaultRepository(),
+                action.getScript().getCode(),
+                context);
+
+        // Display a message accordingly on what is set in result
+        if (scriptResult.containsKey(Script.RESULT_GUI_MESSAGE_KEY)) {
+          singleResult.put(MESSAGE, (String) scriptResult.get(Script.RESULT_GUI_MESSAGE_KEY));
+        } else if (scriptResult.containsKey(Script.RESULT_GUI_MESSAGE)) {
+          singleResult.put(MESSAGE, (String) scriptResult.get(Script.RESULT_GUI_MESSAGE));
+        } else {
+          singleResult.put(MESSAGE, "Action executed successfully");
+        }
+
+        if (scriptResult.containsKey(Script.RESULT_GUI_OUTCOME)) {
+          singleResult.put("value", (String) scriptResult.get(Script.RESULT_GUI_OUTCOME));
+        }
+        result.put(entityCode, singleResult);
+
+      } catch (EntityDoesNotExistsException e) {
+        LOG.error("Failed to execute a script {} on entity {}", this.actionCode, entityCode, e);
+        throw new BusinessException(
+            "Failed to execute custom action: " + this.actionCode + " on entity: " + entityCode, e);
+      } finally {
+        LOG.info("Run " + this.actionCode + " action done.");
+      }
+    }
   }
 }
