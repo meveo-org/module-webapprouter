@@ -463,6 +463,7 @@ public class GenerateWebAppScript extends Script {
 
 				EntityActions entityActions = new EntityActions();
 				for (Entry<String, EntityCustomAction> entry : actions.entrySet()) {
+					LOG.debug("action: {}", entry.getKey());
 					entityActions.add(entry.getValue());
 				}
 
@@ -875,11 +876,14 @@ class EntityActions {
 	}
 
 	public void add(EntityCustomAction customAction) {
+		LOG.debug("adding customAction: {}", customAction);
 		this.actions.add(new Action(customAction));
+		LOG.debug("this.actions: {}", this.actions);
 	}
 
 	@Override
 	public String toString() {
+		LOG.debug("actions: {}", this.actions);
 		String prefix = "export const actions = [" + CRLF;
 		String suffix = CRLF + "];" + CRLF;
 		return this.actions.stream().sorted().map(Action::toString)
@@ -942,7 +946,8 @@ class Action implements Comparable<Action> {
 			return false;
 		}
 		Action action = (Action) o;
-		return this.getIndex() == action.getIndex()
+		return Objects.equals(this.getCustomAction().getCode(), action.getCustomAction().getCode())
+				&& this.getIndex() == action.getIndex()
 				&& Objects.equals(this.getLabel(), action.getLabel());
 	}
 
