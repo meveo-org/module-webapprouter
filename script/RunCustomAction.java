@@ -13,6 +13,7 @@ import org.meveo.model.customEntities.CustomEntityTemplate;
 import org.meveo.model.ICustomFieldEntity;
 import org.meveo.model.IEntity;
 import org.meveo.model.persistence.CEIUtils;
+import org.meveo.model.persistence.JacksonUtil;
 import org.meveo.model.storage.Repository;
 import org.meveo.persistence.CrossStorageService;
 import org.meveo.service.base.MeveoValueExpressionWrapper;
@@ -37,8 +38,7 @@ public class RunCustomAction extends Script {
 
   private Repository repository;
   private String actionCode;
-  private List<String> entityCodes;
-  private String uuid;
+  private EntityList runWith;
   private Map<String, Object> result;
 
   public String getActionCode() {
@@ -49,20 +49,12 @@ public class RunCustomAction extends Script {
     this.actionCode = actionCode;
   }
 
-  public List<String> getEntityCodes() {
-    return entityCodes;
+  public EntityList getRunWith() {
+    return runWith;
   }
 
-  public void setEntityCodes(List<String> entityCodes) {
-    this.entityCodes = entityCodes;
-  }
-
-  public String getUuid() {
-    return uuid;
-  }
-
-  public void setUuid(String uuid) {
-    this.uuid = uuid;
+  public void setRunWith(EntityList runWith) {
+    this.runWith = runWith;
   }
 
   public Repository getDefaultRepository() {
@@ -79,8 +71,7 @@ public class RunCustomAction extends Script {
   RunCustomAction() {
     super();
     this.actionCode = "";
-    this.entityCodes = null;
-    this.uuid = "";
+    this.runWith = null;
     this.result = new HashMap<>();
   }
 
@@ -88,24 +79,28 @@ public class RunCustomAction extends Script {
   public void execute(Map<String, Object> parameters) throws BusinessException {
     super.execute(parameters);
     LOG.debug("parameters: {}", parameters);
-    if (this.entityCodes == null) {
-      throw new BusinessException(
-          "No entity codes specified. Please specify at least one entity code in the parameters.");
+    if (this.actionCode == null || this.actionCode.isEmpty()) {
+      throw new BusinessException("No action code specified. Please specify an action code in the parameters.");
     }
-    for (String entityCode : this.entityCodes) {
+    if (this.runWith == null) {
+      throw new BusinessException(
+          "No entity codes specified. Please specify at least one entity in the parameters.");
+    }
+    for (EntityParameter entityParameter : this.runWith.getEntities()) {
       Map<String, Object> singleResult = new HashMap<>();
       try {
+        String entityCode = entityParameter.getCode();
+        String uuid = entityParameter.getUuid();
         CustomEntityTemplate entityTemplate = cetService.findByCodeOrDbTablename(entityCode);
         Map<String, Object> entity = crossStorageService
-            .find(this.getDefaultRepository(), entityTemplate, this.uuid, true);
+            .find(this.getDefaultRepository(), entityTemplate, uuid, true);
         if (entity == null) {
-          throw new BusinessException(
-              "Entity not found. CET: " + entityCode + " UUID: " + this.uuid);
+          throw new BusinessException("Entity not found: " + entityParameter);
         }
         LOG.debug("entity: {}", entity);
         LOG.debug("this.actionCode: {}", this.actionCode);
-        LOG.debug("this.entityCodes: {}", this.entityCodes);
-        LOG.debug("this.uuid: {}", this.uuid);
+        LOG.debug("this.entityParameter: {}", entityParameter);
+        LOG.debug("uuid: {}", uuid);
 
         EntityCustomAction action = ecaService.findByCode(this.actionCode);
         if (action == null) {
@@ -148,15 +143,54 @@ public class RunCustomAction extends Script {
         if (scriptResult.containsKey(Script.RESULT_GUI_OUTCOME)) {
           singleResult.put("value", (String) scriptResult.get(Script.RESULT_GUI_OUTCOME));
         }
-        result.put(entityCode, singleResult);
-
+        result.put(entityCode + ":" + uuid, singleResult);
       } catch (EntityDoesNotExistsException e) {
-        LOG.error("Failed to execute a script {} on entity {}", this.actionCode, entityCode, e);
+        LOG.error("Failed to execute a script {} on entity {}", this.actionCode, entityParameter,
+            e);
         throw new BusinessException(
-            "Failed to execute custom action: " + this.actionCode + " on entity: " + entityCode, e);
+            "Failed to execute custom action: " + this.actionCode + " on entity: "
+                + entityParameter,
+            e);
       } finally {
         LOG.info("Run " + this.actionCode + " action done.");
       }
     }
+  }
+}
+
+class EntityList {
+  private List<EntityParameter> entities;
+
+  public List<EntityParameter> getEntities() {
+    return entities;
+  }
+
+  public void setEntities(List<EntityParameter> entities) {
+    this.entities = entities;
+  }
+}
+class EntityParameter {
+  private String code;
+  private String uuid;
+
+  public String getCode() {
+    return code;
+  }
+
+  public void setCode(String code) {
+    this.code = code;
+  }
+
+  public String getUuid() {
+    return uuid;
+  }
+
+  public void setUuid(String uuid) {
+    this.uuid = uuid;
+  }
+
+  @Override
+  public String toString() {
+    return "EntityParameter [code=" + code + ", uuid=" + uuid + "]";
   }
 }
