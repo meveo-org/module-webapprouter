@@ -137,6 +137,7 @@ public class GenerateWebAppScript extends Script {
 			this.baseUrl = LOCALHOST;
 		}
 
+		this.baseUrl = this.baseUrl.strip().endsWith("/") ? this.baseUrl : this.baseUrl + "/";
 		this.baseUrl = this.baseUrl + appContext;
 
 		LOG.debug("user: {}", user);
