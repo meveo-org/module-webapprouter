@@ -47,6 +47,7 @@ import org.meveo.model.storage.Repository;
 import org.meveo.persistence.CrossStorageService;
 import org.meveo.security.MeveoUser;
 import org.meveo.service.admin.impl.MeveoModuleService;
+import org.meveo.service.crm.impl.CurrentUserProducer;
 import org.meveo.service.crm.impl.CustomFieldInstanceService;
 import org.meveo.service.crm.impl.CustomFieldTemplateService;
 import org.meveo.service.custom.CustomEntityTemplateService;
@@ -64,14 +65,14 @@ public class GenerateWebAppScript extends Script {
 	private static final String MASTER_BRANCH = "master";
 	private static final String MEVEO_BRANCH = "meveo";
 	private static final String MV_TEMPLATE_REPO = "https://github.com/meveo-org/mv-template.git";
-	private static final String LOG_SEPARATOR =
-			"***********************************************************";
+	private static final String LOG_SEPARATOR = "***********************************************";
 	private static final String CUSTOM_TEMPLATE = CustomEntityTemplate.class.getName();
 	private static final String WEB_APP_TEMPLATE = WebApplication.class.getSimpleName();
 	private static final String PARENT = "Parent";
 	private static final String PAGE_TEMPLATE = "Parent.js";
 	private static final String INDEX_TEMPLATE = "index.js";
 	private static final String LOCALHOST = "http://localhost:8080/";
+	private static final String MODULE_CODE = "MODULE_CODE";
 	private static final String KEYCLOAK_URL = "http://host.docker.internal:8081/auth";
 	private static final String KEYCLOAK_REALM = "meveo";
 	private static final String KEYCLOAK_RESOURCE = "meveo-web";
@@ -91,17 +92,9 @@ public class GenerateWebAppScript extends Script {
 	private RepositoryService repositoryService = getCDIBean(RepositoryService.class);
 	private ParamBeanFactory paramBeanFactory = getCDIBean(ParamBeanFactory.class);
 	private CrossStorageApi crossStorageApi = getCDIBean(CrossStorageApi.class);
+	private CurrentUserProducer currentUserProducer = getCDIBean(CurrentUserProducer.class);
 
 	private Repository repository;
-	private String moduleCode;
-
-	public String getModuleCode() {
-		return this.moduleCode;
-	}
-
-	public void setModuleCode(String moduleCode) {
-		this.moduleCode = moduleCode;
-	}
 
 	public Repository getDefaultRepository() {
 		if (repository == null) {
@@ -114,13 +107,16 @@ public class GenerateWebAppScript extends Script {
 	public void execute(Map<String, Object> parameters) throws BusinessException {
 		LOG.debug("START - GenerateWebAppScript.execute()");
 		super.execute(parameters);
+		CustomEntityInstance contextEntity = (CustomEntityInstance) parameters.get(CONTEXT_ENTITY);
+		String moduleCode = (String) contextEntity.get("code");
 		LOG.debug("moduleCode: {}", moduleCode);
 		if (moduleCode == null) {
 			throw new BusinessException("moduleCode not set");
 		}
 		MeveoModule module = meveoModuleService.findByCode(moduleCode);
 
-		MeveoUser user = (MeveoUser) parameters.get(CONTEXT_CURRENT_USER);
+		MeveoUser user = currentUserProducer.getCurrentUser();
+
 
 		ParamBean appConfig = paramBeanFactory.getInstance();
 		String remoteUrl = appConfig.getProperty("meveo.git.directory.remote.url", null);
@@ -252,9 +248,14 @@ public class GenerateWebAppScript extends Script {
 								new FileTransformer(sourcePath, destinationPath, entityCodes);
 						if (isParentFile) {
 							filesToCommit.addAll(this.generatePages(transformer));
-						} else if (isConfigFile && serverUrl != null) {
+						} else if (isConfigFile) {
+							Map<String, String> substitutionMap = new HashMap<>();
+							if(serverUrl != null) {
+								substitutionMap.put(LOCALHOST, serverUrl);
+							}
+							substitutionMap.put(MODULE_CODE, moduleCode);
 							filesToCommit
-									.add(this.searchAndReplace(sourceFile, destinationFile, LOCALHOST, serverUrl));
+									.add(this.searchAndReplace(sourceFile, destinationFile, substitutionMap));
 						} else if (isKeycloakFile && serverUrl != null) {
 							LOG.debug("keycloakUrl: {}", keycloakUrl);
 							Map<String, String> substitutionMap = new HashMap<>();
@@ -504,27 +505,27 @@ public class GenerateWebAppScript extends Script {
 				}
 			}
 		} else if (source.contains(INDEX_TEMPLATE)) {
-			String destination = transformer.getDestination().toString();
-			StringBuilder modelIndexImports = new StringBuilder();
+			// String destination = transformer.getDestination().toString();
+			// StringBuilder modelIndexImports = new StringBuilder();
 
-			List<String> entitiesToExport = new ArrayList<>();
-			for (String entityCode : transformer.getEntityCodes()) {
-				String modelImport =
-						String.format("import * as %s from \"./%s.js\";", entityCode, entityCode);
-				modelIndexImports.append(modelImport).append(CRLF);
-				entitiesToExport.add(String.format("%s", entityCode));
-			}
-			modelIndexImports.append(CRLF).append("export const MODELS = [ ")
-					.append(String.join(", ", entitiesToExport))
-					.append(" ];").append(CRLF);
+			// List<String> entitiesToExport = new ArrayList<>();
+			// for (String entityCode : transformer.getEntityCodes()) {
+			// String modelImport =
+			// String.format("import * as %s from \"./%s.js\";", entityCode, entityCode);
+			// modelIndexImports.append(modelImport).append(CRLF);
+			// entitiesToExport.add(String.format("%s", entityCode));
+			// }
+			// modelIndexImports.append(CRLF).append("export const MODELS = [ ")
+			// .append(String.join(", ", entitiesToExport))
+			// .append(" ];").append(CRLF);
 
-			try {
-				File outputFile = new File(destination.toString());
-				FileUtils.write(outputFile, modelIndexImports.toString(), StandardCharsets.UTF_8);
-				files.add(outputFile);
-			} catch (IOException e) {
-				throw new BusinessException("Failed creating file." + e.getMessage());
-			}
+			// try {
+			// File outputFile = new File(destination.toString());
+			// FileUtils.write(outputFile, modelIndexImports.toString(), StandardCharsets.UTF_8);
+			// files.add(outputFile);
+			// } catch (IOException e) {
+			// throw new BusinessException("Failed creating file." + e.getMessage());
+			// }
 		}
 
 		return files;
