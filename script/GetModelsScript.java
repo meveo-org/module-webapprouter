@@ -22,9 +22,9 @@ import org.slf4j.LoggerFactory;
 public class GetModelsScript extends Script {
 	public static final String CRLF = "\r\n";
 	public static final String TAB = "\t";
-	private static final String IMPORT_STATEMENT = "import * as %s from \"./%s.js\";";
+	private static final String IMPORT_STATEMENT = "import * as %s from \"%s/%s.js\";";
+	private static final String LOCALHOST = "http://localhost:8080/";
 	private static final String CUSTOM_TEMPLATE = CustomEntityTemplate.class.getName();
-	private static final String AFFIX = "-UI";
 	private static final Logger LOG = LoggerFactory.getLogger(GetModelsScript.class);
 
 	private MeveoModuleService meveoModuleService = getCDIBean(MeveoModuleService.class);
@@ -54,6 +54,12 @@ public class GetModelsScript extends Script {
 		MeveoModule module = meveoModuleService.findByCode(moduleCode);
 		MeveoUser user = currentUserProducer.getCurrentUser();
 		ParamBean appConfig = paramBeanFactory.getInstance();
+
+		String serverUrl = appConfig.getProperty("meveo.admin.baseUrl", LOCALHOST);
+		String appContext = appConfig.getProperty("meveo.moduleName", "");
+
+		serverUrl = serverUrl.strip().endsWith("/") ? serverUrl : serverUrl + "/";
+		String modelsUrl = serverUrl + appContext + "/rest/webapp/" + moduleCode + "/model";
 
 		LOG.debug("user: {}", user);
 
@@ -96,7 +102,7 @@ public class GetModelsScript extends Script {
 				StringBuilder modelIndexImports = new StringBuilder();
 
 				for (String entityCode : allowedEntities) {
-					String modelImport = String.format(IMPORT_STATEMENT, entityCode, entityCode);
+					String modelImport = String.format(IMPORT_STATEMENT, entityCode, modelsUrl, entityCode);
 					modelIndexImports.append(modelImport).append(CRLF);
 				}
 				modelIndexImports
@@ -105,6 +111,7 @@ public class GetModelsScript extends Script {
 						.append(CRLF)
 						.append(TAB)
 						.append(String.join(", ", allowedEntities))
+						.append(CRLF)
 						.append(" ];")
 						.append(CRLF);
 
@@ -121,10 +128,15 @@ public class GetModelsScript extends Script {
 							.append(CRLF)
 							.append(TAB)
 							.append(TAB)
-							.append(String.join(", ", entityPermission.getPermissions()))
+							.append(String.join(", ",
+									entityPermission.getPermissions().stream()
+											.map(permission -> "\"" + permission + "\"")
+											.collect(Collectors.toList())))
+							.append(CRLF)
+							.append(TAB)
 							.append(" ], ");
 				}
-				modelIndexImports.append("};").append(CRLF);
+				modelIndexImports.append(CRLF).append("};").append(CRLF);
 
 				// return model index.js
 				result = modelIndexImports.toString();
