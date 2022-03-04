@@ -1,65 +1,46 @@
-import EndpointInterface from "#{API_BASE_URL}/api/rest/endpoint/EndpointInterface.js";
-
-// the request schema, this should be updated
-// whenever changes to the endpoint parameters are made
-// this is important because this is used to validate and parse the request parameters
-const requestSchema = {
-  "title" : "runCustomActionRequest",
-  "id" : "runCustomActionRequest",
-  "default" : "Schema definition for runCustomAction",
-  "$schema" : "http://json-schema.org/draft-07/schema",
-  "type" : "object",
-  "properties" : {
-    "runWith" : {
-      "title" : "runWith",
-      "type" : "string",
-      "minLength" : 1
-    },
-    "actionCode" : {
-      "title" : "actionCode",
-      "type" : "string",
-      "minLength" : 1
-    }
-  }
+const runCustomAction = async (parameters) =>  {
+	const baseUrl = window.location.origin;
+	const url = new URL(`${window.location.pathname.split('/')[1]}/rest/runCustomAction/`, baseUrl);
+	return fetch(url.toString(), {
+		method: 'POST', 
+		headers : new Headers({
+ 			'Content-Type': 'application/json'
+		}),
+		body: JSON.stringify({
+			actionCode : parameters.actionCode,
+			runWith : parameters.runWith
+		})
+	});
 }
 
-// the response schema, this should be updated
-// whenever changes to the endpoint parameters are made
-// this is important because this could be used to parse the result
-const responseSchema = {
-  "title" : "runCustomActionResponse",
-  "id" : "runCustomActionResponse",
-  "default" : "Schema definition for runCustomAction",
-  "$schema" : "http://json-schema.org/draft-07/schema",
-  "type" : "object",
-  "properties" : {
-    "result" : {
-      "title" : "result",
-      "type" : "string",
-      "minLength" : 1
-    }
-  }
+const runCustomActionForm = (container) => {
+	const html = `<form id='runCustomAction-form'>
+		<div id='runCustomAction-actionCode-form-field'>
+			<label for='actionCode'>actionCode</label>
+			<input type='text' id='runCustomAction-actionCode-param' name='actionCode'/>
+		</div>
+		<div id='runCustomAction-runWith-form-field'>
+			<label for='runWith'>runWith</label>
+			<input type='text' id='runCustomAction-runWith-param' name='runWith'/>
+		</div>
+		<button type='button'>Test</button>
+	</form>`;
+
+	container.insertAdjacentHTML('beforeend', html)
+
+	const actionCode = container.querySelector('#runCustomAction-actionCode-param');
+	const runWith = container.querySelector('#runCustomAction-runWith-param');
+
+	container.querySelector('#runCustomAction-form button').onclick = () => {
+		const params = {
+			actionCode : actionCode.value !== "" ? actionCode.value : undefined,
+			runWith : runWith.value !== "" ? runWith.value : undefined
+		};
+
+		runCustomAction(params).then(r => r.text().then(
+				t => alert(t)
+			));
+	};
 }
 
-// should contain offline mock data, make sure it adheres to the response schema
-const mockResult = {};
-
-class runCustomAction extends EndpointInterface {
-	constructor() {
-		// name and http method, these are inserted when code is generated
-		super("runCustomAction", "POST");
-		this.requestSchema = requestSchema;
-		this.responseSchema = responseSchema;
-		this.mockResult = mockResult;
-	}
-
-	getRequestSchema() {
-		return this.requestSchema;
-	}
-
-	getResponseSchema() {
-		return this.responseSchema;
-	}
-}
-
-export default new runCustomAction();
+export { runCustomAction, runCustomActionForm };
