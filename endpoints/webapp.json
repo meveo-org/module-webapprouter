@@ -1,0 +1,16 @@
+{
+  "code" : "webapp",
+  "secured" : false,
+  "checkPathParams" : false,
+  "serviceCode" : "org.manaty.webapp.WebApp",
+  "synchronous" : true,
+  "method" : "GET",
+  "parameterMappings" : [ ],
+  "pathParameters" : [ "appCode" ],
+  "roles" : [ ],
+  "returnedVariableName" : "result",
+  "serializeResult" : false,
+  "contentType" : "application/json",
+  "basePath" : "webapp",
+  "path" : "/{appCode}"
+}

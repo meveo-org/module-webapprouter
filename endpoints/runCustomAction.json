@@ -1,0 +1,27 @@
+{
+  "code" : "runCustomAction",
+  "description" : "Run a custom action",
+  "secured" : true,
+  "checkPathParams" : true,
+  "serviceCode" : "org.meveo.script.RunCustomAction",
+  "synchronous" : true,
+  "method" : "POST",
+  "parameterMappings" : [ {
+    "serviceParameter" : "actionCode",
+    "multivalued" : false,
+    "parameterName" : "actionCode",
+    "valueRequired" : true
+  }, {
+    "serviceParameter" : "runWith",
+    "multivalued" : false,
+    "parameterName" : "runWith",
+    "valueRequired" : true
+  } ],
+  "pathParameters" : [ ],
+  "roles" : [ ],
+  "returnedVariableName" : "result",
+  "serializeResult" : true,
+  "contentType" : "application/json",
+  "basePath" : "runCustomAction",
+  "path" : "/"
+}
