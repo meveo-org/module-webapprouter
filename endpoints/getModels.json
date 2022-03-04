@@ -1,0 +1,17 @@
+{
+  "code" : "getModels",
+  "description" : "Fetch models available to the user",
+  "secured" : false,
+  "checkPathParams" : true,
+  "serviceCode" : "org.meveo.script.GetModelsScript",
+  "synchronous" : true,
+  "method" : "GET",
+  "parameterMappings" : [ ],
+  "pathParameters" : [ "moduleCode" ],
+  "roles" : [ ],
+  "returnedVariableName" : "result",
+  "serializeResult" : false,
+  "contentType" : "application/json",
+  "basePath" : "getModels",
+  "path" : "/{moduleCode}"
+}

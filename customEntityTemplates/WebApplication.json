@@ -1,0 +1,12 @@
+{
+  "code" : "WebApplication",
+  "name" : "Web Application",
+  "description" : "Web application",
+  "customEntityCategoryCode" : "APPS",
+  "availableStorages" : [ "SQL" ],
+  "sqlStorageConfiguration" : {
+    "storeAsTable" : true
+  },
+  "samples" : [ ],
+  "audited" : false
+}

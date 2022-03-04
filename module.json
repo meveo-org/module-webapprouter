@@ -1,0 +1,9 @@
+{
+  "code" : "WEBAPPROUTER",
+  "description" : "Meveo WebApp",
+  "license" : "GPL",
+  "currentVersion" : "0.11.0",
+  "isInDraft" : true,
+  "moduleDependencies" : [ ],
+  "moduleFiles" : [ ]
+}
