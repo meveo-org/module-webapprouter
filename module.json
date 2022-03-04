@@ -1,5 +1,5 @@
 {
-  "code" : "WEBAPPROUTER",
+  "code" : "module-webapprouter",
   "description" : "Meveo WebApp",
   "license" : "GPL",
   "currentVersion" : "0.11.0",
