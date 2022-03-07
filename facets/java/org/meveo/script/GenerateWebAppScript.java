@@ -75,6 +75,7 @@ public class GenerateWebAppScript extends Script {
 	private static final String KEYCLOAK_URL = "http://host.docker.internal:8081/auth";
 	private static final String KEYCLOAK_REALM = "meveo";
 	private static final String KEYCLOAK_RESOURCE = "meveo-web";
+	private static final String MODULE_CODE = "MODULE_CODE";
 	private static final String AFFIX = "-UI";
 	private static final Logger LOG = LoggerFactory.getLogger(GenerateWebAppScript.class);
 	private String CRLF = WebAppScriptHelper.CRLF;
@@ -253,8 +254,11 @@ public class GenerateWebAppScript extends Script {
 						if (isParentFile) {
 							filesToCommit.addAll(this.generatePages(transformer));
 						} else if (isConfigFile && serverUrl != null) {
+							Map<String, String> substitutionMap = new HashMap<>();
+							substitutionMap.put(MODULE_CODE, moduleCode);
+							substitutionMap.put(LOCALHOST, serverUrl);
 							filesToCommit
-									.add(this.searchAndReplace(sourceFile, destinationFile, LOCALHOST, serverUrl));
+									.add(this.searchAndReplace(sourceFile, destinationFile, substitutionMap));
 						} else if (isKeycloakFile && serverUrl != null) {
 							LOG.debug("keycloakUrl: {}", keycloakUrl);
 							Map<String, String> substitutionMap = new HashMap<>();
