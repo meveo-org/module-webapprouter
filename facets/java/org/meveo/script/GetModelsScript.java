@@ -67,7 +67,7 @@ public class GetModelsScript extends Script {
 		baseUrl = baseUrl.strip().endsWith("/") ? baseUrl : baseUrl + "/";
 		baseUrl = baseUrl + appContext;
 
-		String schemaPath = String.format("%s/api/rest/entityCustomization/entity/schema", baseUrl);
+		String schemaPath = String.format("%s/rest/webapp/%s/models", baseUrl, moduleCode);
 
 		LOG.debug("user: {}", user);
 
