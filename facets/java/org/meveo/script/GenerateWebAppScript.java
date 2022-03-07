@@ -127,7 +127,7 @@ public class GenerateWebAppScript extends Script {
 		String remoteUrl = appConfig.getProperty("meveo.git.directory.remote.url", null);
 		String remoteUsername = appConfig.getProperty("meveo.git.directory.remote.username", null);
 		String remotePassword = appConfig.getProperty("meveo.git.directory.remote.password", null);
-		String appContext = appConfig.getProperty("meveo.moduleName", "");
+		String appContext = appConfig.getProperty("meveo.admin.webContext", "");
 		String serverUrl = appConfig.getProperty("meveo.admin.baseUrl", null);
 		String keycloakUrl = System.getProperty("meveo.keycloak.url");
 		String keycloakRealm = System.getProperty("meveo.keycloak.realm");

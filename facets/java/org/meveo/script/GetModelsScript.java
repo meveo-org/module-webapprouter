@@ -22,7 +22,8 @@ import org.slf4j.LoggerFactory;
 public class GetModelsScript extends Script {
 	public static final String CRLF = "\r\n";
 	public static final String TAB = "\t";
-	private static final String IMPORT_STATEMENT = "import * as %s from SCHEMA_PATH + \"/%s.js\";";
+	private static final String LOCALHOST = "http://localhost:8080/";
+	private static final String IMPORT_STATEMENT = "import * as %s from \"%s/%s.js\";";
 	private static final String CUSTOM_TEMPLATE = CustomEntityTemplate.class.getName();
 	private static final String AFFIX = "-UI";
 	private static final Logger LOG = LoggerFactory.getLogger(GetModelsScript.class);
@@ -54,6 +55,19 @@ public class GetModelsScript extends Script {
 		MeveoModule module = meveoModuleService.findByCode(moduleCode);
 		MeveoUser user = currentUserProducer.getCurrentUser();
 		ParamBean appConfig = paramBeanFactory.getInstance();
+
+		String appContext = appConfig.getProperty("meveo.admin.webContext", "");
+		String serverUrl = appConfig.getProperty("meveo.admin.baseUrl", null);
+
+		String baseUrl = serverUrl;
+		if (baseUrl == null) {
+			baseUrl = LOCALHOST;
+		}
+
+		baseUrl = baseUrl.strip().endsWith("/") ? baseUrl : baseUrl + "/";
+		baseUrl = baseUrl + appContext;
+
+		String schemaPath = String.format("%s/api/rest/entityCustomization/entity/schema", baseUrl);
 
 		LOG.debug("user: {}", user);
 
@@ -94,10 +108,9 @@ public class GetModelsScript extends Script {
 
 				// generate model index.js
 				StringBuilder modelIndexImports = new StringBuilder();
-				modelIndexImports.append("import { SCHEMA_PATH } from \"config\";").append(CRLF);
 
 				for (String entityCode : allowedEntities) {
-					String modelImport = String.format(IMPORT_STATEMENT, entityCode, entityCode);
+					String modelImport = String.format(IMPORT_STATEMENT, entityCode, schemaPath, entityCode);
 					LOG.debug("modelImport: {}", modelImport);
 					modelIndexImports.append(modelImport).append(CRLF);
 				}
