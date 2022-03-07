@@ -22,7 +22,7 @@ import org.slf4j.LoggerFactory;
 public class GetModelsScript extends Script {
 	public static final String CRLF = "\r\n";
 	public static final String TAB = "\t";
-	private static final String IMPORT_STATEMENT = "import * as %s from \"${SCHEMA_PATH}/%s.js\";";
+	private static final String IMPORT_STATEMENT = "import * as %s from SCHEMA_PATH + \"/%s.js\";";
 	private static final String CUSTOM_TEMPLATE = CustomEntityTemplate.class.getName();
 	private static final String AFFIX = "-UI";
 	private static final Logger LOG = LoggerFactory.getLogger(GetModelsScript.class);
