@@ -11,7 +11,7 @@
   "roles" : [ ],
   "returnedVariableName" : "result",
   "serializeResult" : false,
-  "contentType" : "application/json",
+  "contentType" : "application/javascript",
   "basePath" : "getModels",
   "path" : "/{moduleCode}"
 }
