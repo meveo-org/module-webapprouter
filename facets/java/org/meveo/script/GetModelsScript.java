@@ -93,7 +93,7 @@ public class GetModelsScript extends Script {
 				LOG.debug("entityPermissions: {}", entityPermissions);
 
 				// generate model index.js
-				StringBuilder modelIndexImports = new StringBuilder();
+				StringBuilder modelIndexImports = new StringBuilder("import { SCHEMA_PATH } from \"config\";");
 
 				for (String entityCode : allowedEntities) {
 					String modelImport = String.format(IMPORT_STATEMENT, entityCode, entityCode);
