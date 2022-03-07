@@ -22,7 +22,7 @@ import org.slf4j.LoggerFactory;
 public class GetModelsScript extends Script {
 	public static final String CRLF = "\r\n";
 	public static final String TAB = "\t";
-	private static final String IMPORT_STATEMENT = "import * as %s from \"./%s.js\";";
+	private static final String IMPORT_STATEMENT = "import * as %s from \"${SCHEMA_PATH}/%s.js\";";
 	private static final String CUSTOM_TEMPLATE = CustomEntityTemplate.class.getName();
 	private static final String AFFIX = "-UI";
 	private static final Logger LOG = LoggerFactory.getLogger(GetModelsScript.class);
@@ -105,6 +105,7 @@ public class GetModelsScript extends Script {
 						.append(CRLF)
 						.append(TAB)
 						.append(String.join(", ", allowedEntities))
+						.append(CRLF)
 						.append(" ];")
 						.append(CRLF);
 
@@ -122,9 +123,11 @@ public class GetModelsScript extends Script {
 							.append(TAB)
 							.append(TAB)
 							.append(String.join(", ", entityPermission.getPermissions()))
+							.append(CRLF)
+							.append(TAB)
 							.append(" ], ");
 				}
-				modelIndexImports.append("};").append(CRLF);
+				modelIndexImports.append(CRLF).append("};").append(CRLF);
 
 				// return model index.js
 				result = modelIndexImports.toString();
