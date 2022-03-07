@@ -129,6 +129,9 @@ public class GetModelsScript extends Script {
 						.append("export const ENTITY_PERMISSIONS = { ");
 
 				for (EntityPermission entityPermission : entityPermissions) {
+					String availablePermissions = String.join(", ", entityPermission.getPermissions().stream()
+							.map(permission -> "\"" + permission + "\"")
+							.collect(Collectors.toList()));
 					modelIndexImports
 							.append(CRLF)
 							.append(TAB)
@@ -137,7 +140,7 @@ public class GetModelsScript extends Script {
 							.append(CRLF)
 							.append(TAB)
 							.append(TAB)
-							.append(String.join(", ", entityPermission.getPermissions()))
+							.append(availablePermissions)
 							.append(CRLF)
 							.append(TAB)
 							.append(" ], ");
