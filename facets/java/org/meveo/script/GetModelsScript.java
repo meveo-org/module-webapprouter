@@ -97,6 +97,7 @@ public class GetModelsScript extends Script {
 
 				for (String entityCode : allowedEntities) {
 					String modelImport = String.format(IMPORT_STATEMENT, entityCode, entityCode);
+					LOG.debug("modelImport: {}", modelImport);
 					modelIndexImports.append(modelImport).append(CRLF);
 				}
 				modelIndexImports
