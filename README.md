@@ -27,7 +27,7 @@ This describes the process being used to generate a webapp for modules installed
 8. The copied and generated files in the repository are committed into the _WebAppRepo_'s **meveo** branch.
 9. The contents of the **meveo** branch are then merged into the **master** branch of the _WebAppRepo_ and if no merge conflicts are found, will be committed automatically.  Otherwise, the **master** branch is left unchanged and a log message is printed out stating that the branches need to be manually merged by the user.
 10. The *code, label, entities, and ROOT_PATH* for the newly created web application are then saved into its own _WebApplication_ custom entity instance which will be used later on by the _WebAppRouter_ to load the correct files when loading the web application into the browser.
-11. The generated application will then be accessible through: _{Meveo Server URL}/meveo/rest/webapp/{CET Code}_.
+11. The generated application will then be accessible through: _{Meveo Server URL}/meveo/rest/webapp/{Module Code}_.
 
 ## WebApp
 
