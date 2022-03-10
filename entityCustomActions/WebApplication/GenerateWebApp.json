@@ -1,1 +1,12 @@
-{"code":"GenerateWebApp","description":"Generate Web Application based on Module code","appliesTo":"CE_WebApplication","label":"Generate Web Application","script":"org.meveo.script.GenerateWebAppScript","applicableToEntityList":false,"applicableToEntityInstance":true}
+{
+    "code": "GenerateWebApp",
+    "description": "Generate Web Application based on Module code",
+    "appliesTo": "CE_WebApplication",
+    "label": "Generate Web Application",
+    "script": "org.meveo.script.GenerateWebAppScript",
+    "applicableToEntityList": false,
+    "applicableToEntityInstance": true,
+    "scriptParameters": {
+        "moduleCode": "#{entity.get('code')}"
+    }
+}
