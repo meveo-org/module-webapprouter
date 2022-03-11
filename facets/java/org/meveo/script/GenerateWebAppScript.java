@@ -304,6 +304,10 @@ public class GenerateWebAppScript extends Script {
 					}
 				}
 
+				// Install dependencies
+				File repoDir = GitHelper.getRepositoryDir(null, moduleWebAppRepo.getCode());
+				org.meveo.commons.utils.NpmHelper.npmInstall(repoDir);
+
 			} catch (IOException ioe) {
 				throw new BusinessException(ioe);
 			}
