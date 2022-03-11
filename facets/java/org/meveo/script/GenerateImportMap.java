@@ -17,10 +17,6 @@ public class GenerateImportMap extends Script {
 
     private static Logger LOGGER = LoggerFactory.getLogger(GenerateImportMap.class);
 
-    public void execute(Map<String, Object> ctx) throws BusinessException {
-        generateImportMap(new File("C:\\Users\\clement.bareth\\Documents\\tmp"));
-    }
-    
     public static String generateImportMap(File directory) throws BusinessException {
         try {
             Map<String, String> importMap = new HashMap<>();
@@ -49,12 +45,11 @@ public class GenerateImportMap extends Script {
                 });
 
             String importMapString = JacksonUtil.toStringPrettyPrinted(resultMap);
-            MeveoFileUtils.writeAndPreserveCharset(importMapString, new File(directory, "importmap.json"));
+            String importMapJs = "window.importmap = " + importMapString + ";";
+            MeveoFileUtils.writeAndPreserveCharset(importMapJs, new File(directory, "importmap.js"));
             return importMapString;
         } catch (Exception e) {
             throw new BusinessException(e);
         }
-        
-        return null;
     }
 }
