@@ -402,6 +402,9 @@ public class GenerateWebAppScript extends Script {
 	}
 
 	private Set<String> iterateRefSchemas(String entityCode, Set<String> allSchemas) {
+      	if (allSchemas.contains(entityCode)) {
+          return allSchemas;
+        }
 		Set<String> refSchemaCodes = allSchemas;
 		refSchemaCodes.add(entityCode);
 		CustomEntityTemplate entityTemplate = cetService.findByCodeOrDbTablename(entityCode);
