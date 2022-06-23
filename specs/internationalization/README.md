@@ -6,16 +6,20 @@
 classDiagram
 class WebApplication {
     string code
+    string ROOT_PATH
+    list~I18NextLocale~ locales
     void importTranslationsFromCsv(File file)
     File generateTranslationsCsv()
-    list~I18NextLocale~ locales
+    buildI18n()
 }
 class I18NextTranslation {
-    string code
+    string uuid
     list~I18NextLabel~ labels
+    boolean generated
 }
 class I18NextLocale {
-   string locale
+   string uuid
+   string localeName
 }
 class I18NextLabel {
    string value
@@ -26,7 +30,6 @@ class I18NextCft {
     string uuid
     string cftCode
     string templateCode
-    boolean generated
     I18NextTranslation translation
 }
 WebApplication --* I18NextLocale
@@ -44,8 +47,9 @@ I18NextLabel --> I18NextLocale
 - a `I18NextLabel` instance for each locale and with value = the cft description
 - a `I18NextTranslation` that has code = {templateCode}.{cftCode}, generated = `true` and that references the previous `I18NextLabel`
 - a  `I18NextCft` that has cftCode = cft.code, templateCode=cft.appliesTo, and that references the previous `I18NextTranslation`
+- add each of the generated CEIs to the related module
 
-2/ Remove every generated `I18NextTranslation` that are not referenced by an `I18NextCft`
+2/ Delete every generated `I18NextTranslation` that are not referenced by an `I18NextCft`
 
 3/ Determine the columns of the CSV
 - always the "code" column
@@ -58,4 +62,15 @@ I18NextLabel --> I18NextLocale
 **For each line of the CSV :** 
 
 1/ Retrieve or create the `I18NextTranslation` that corresponds to the first row
+
 2/ For each remaining column, create or update the corresponding `I18NextLabel`
+
+3/ Add everything to the related module
+
+3/ Delete all `I18NextTranslation` that are not mentionned in the CSV file
+
+### buildI18n
+
+1/ Convert the data-model to XLIFF format (https://lit.dev/docs/localization/overview/#translation-with-xliff) : create one file per locale, put them under /{ROOT_PATH}/locales/{localeUuid}
+
+2/ Run `npm lit-localize build` from /{ROOT_PATH}
