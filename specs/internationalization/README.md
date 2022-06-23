@@ -38,7 +38,7 @@ I18NextLabel --> I18NextLocale
 
 ## Methods description
 
-*generateTranslationsCsv* :
+### generateTranslationsCsv
 
 1/ For each CFT of the related module, create (only if the corresponding `I18NextCft` does not exist)
 - a `I18NextLabel` instance for each locale and with value = the cft description
@@ -51,4 +51,11 @@ I18NextLabel --> I18NextLocale
 - always the "code" column
 - one column per locale of the `WebApplication`
 
-4/ Write the CSV : iterate over all the `I18NextTranslation` and fill the columns of the CSV
+4/ Write the CSV with the name "translations.csv" on the root of current git repository : iterate over all the `I18NextTranslation` and fill the columns of the CSV. The column headers should be included in the CSV.
+
+### importTranslationsFromCsv
+
+**For each line of the CSV :** 
+
+1/ Retrieve or create the `I18NextTranslation` that corresponds to the first row
+2/ For each remaining column, create or update the corresponding `I18NextLabel`
