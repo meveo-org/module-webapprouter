@@ -71,6 +71,6 @@ I18NextLabel --> I18NextLocale
 
 ### buildI18n
 
-1/ Convert the data-model to XLIFF format (https://lit.dev/docs/localization/overview/#translation-with-xliff) : create one file per locale, put them under /{ROOT_PATH}/locales/{localeUuid}
+1/ Convert the data-model to XLIFF format (https://lit.dev/docs/localization/overview/#translation-with-xliff) : create / overwrite one file per locale, put them under /{ROOT_PATH}/locales/{localeUuid}
 
 2/ Run `npm lit-localize build` from /{ROOT_PATH}
