@@ -22,9 +22,11 @@ class I18NextCft {
     string cftCode
     string templateCode
     boolean generated
+    I18NextTranslation translation
 }
 I18NextLabel *-- I18NextTranslation
 WebApplication --* I18NextTranslation
+I18NextCft --> I18NextTranslation
 ```
 
 ## Methods description
