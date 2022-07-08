@@ -23,7 +23,6 @@ class I18nLocale {
 }
 class I18nLabel {
    string value
-   I18nTranslation translation
    I18nLocale locale
 }
 class I18nCft {
