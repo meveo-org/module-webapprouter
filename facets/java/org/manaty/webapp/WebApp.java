@@ -25,9 +25,11 @@ import org.meveo.commons.utils.ParamBeanFactory;
 import org.meveo.model.crm.EntityReferenceWrapper;
 import org.meveo.model.customEntities.CustomEntityInstance;
 import org.meveo.model.customEntities.WebApplication;
+import org.meveo.model.git.GitRepository;
 import org.meveo.model.storage.Repository;
 import org.meveo.service.custom.CustomEntityInstanceService;
 import org.meveo.service.git.GitHelper;
+import org.meveo.service.git.GitRepositoryService;
 import org.meveo.service.script.Script;
 import org.meveo.service.storage.RepositoryService;
 import org.slf4j.Logger;
@@ -66,6 +68,8 @@ public class WebApp extends Script {
     private CustomEntityInstanceService ceiService = getCDIBean(CustomEntityInstanceService.class);
     private RepositoryService repositoryService = getCDIBean(RepositoryService.class);
     private CrossStorageApi crossStorageApi = getCDIBean(CrossStorageApi.class);
+    private GitRepositoryService gitRepositoryService = getCDIBean(GitRepositoryService.class);
+
     private ParamBean config = paramBeanFactory.getInstance();
     private Repository repository = repositoryService.findDefaultRepository();
 
@@ -120,7 +124,8 @@ public class WebApp extends Script {
             File file = lookupFile(rootPath, remainingPath);
             if (file == null) {
                 LOG.info("File not found in webapp, we look in git");
-                File repositoryDir = GitHelper.getRepositoryDir(null, this.appCode + AFFIX);
+                GitRepository uiRepo = gitRepositoryService.findByCode(this.appCode + AFFIX);
+                File repositoryDir = GitHelper.getRepositoryDir(null, uiRepo);
                 rootPath = repositoryDir.getPath().toString();
                 file = lookupFile(rootPath, remainingPath);
                 // file still doesnt exist, we build it
@@ -157,7 +162,8 @@ public class WebApp extends Script {
                 LOG.info("Attempt to load index.html from " + rootPath);
                 String baseIndexPath = rootPath + File.separator;
                 File indexTemplate = new File(baseIndexPath + INDEX_FILE);
-                String repoPath = GitHelper.getRepositoryDir(null, this.appCode + AFFIX).toPath().toString();
+                GitRepository uiRepo = gitRepositoryService.findByCode(this.appCode + AFFIX);
+                String repoPath = GitHelper.getRepositoryDir(null, uiRepo).toPath().toString();
                 String rootIndex = repoPath + File.separator + INDEX_FILE;
                 boolean isAppIndex = indexTemplate.getAbsolutePath().contains(rootIndex);
 

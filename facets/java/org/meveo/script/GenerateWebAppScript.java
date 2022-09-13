@@ -196,7 +196,8 @@ public class GenerateWebAppScript extends Script {
 				gitClient.pull(webappTemplateRepo, "", "");
 			}
 
-			File webappTemplateDirectory = GitHelper.getRepositoryDir(user, WEB_APP_TEMPLATE);
+			GitRepository templateRepo = gitRepositoryService.findByCode(WEB_APP_TEMPLATE);
+			File webappTemplateDirectory = GitHelper.getRepositoryDir(user, templateRepo);
 			Path webappTemplatePath = webappTemplateDirectory.toPath();
 			LOG.debug("webappTemplate path: {}", webappTemplatePath.toString());
 
@@ -218,7 +219,8 @@ public class GenerateWebAppScript extends Script {
 			String moduleWebAppBranch = gitClient.currentBranch(moduleWebAppRepo);
 			LOG.debug("moduleWebApp branch: {}", moduleWebAppBranch);
 
-			File moduleWebAppDirectory = GitHelper.getRepositoryDir(user, moduleCode + AFFIX);
+			GitRepository uiRepo = gitRepositoryService.findByCode(moduleCode + AFFIX);
+			File moduleWebAppDirectory = GitHelper.getRepositoryDir(user, uiRepo);
 			Path moduleWebAppPath = moduleWebAppDirectory.toPath();
 
 			LOG.debug("moduleWebApp path: {}", moduleWebAppPath.toString());
@@ -305,7 +307,7 @@ public class GenerateWebAppScript extends Script {
 				}
 
 				// Install dependencies
-				File repoDir = GitHelper.getRepositoryDir(null, moduleWebAppRepo.getCode());
+				File repoDir = GitHelper.getRepositoryDir(null, moduleWebAppRepo);
 				org.meveo.commons.utils.NpmHelper.npmInstall(repoDir);
 
 			} catch (IOException ioe) {
