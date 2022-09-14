@@ -1,25 +1,27 @@
 package org.meveo.script;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
 import org.meveo.admin.exception.BusinessException;
+import org.meveo.api.rest.technicalservice.EndpointScript;
 import org.meveo.commons.utils.ParamBean;
 import org.meveo.commons.utils.ParamBeanFactory;
 import org.meveo.model.customEntities.CustomEntityTemplate;
 import org.meveo.model.module.MeveoModule;
 import org.meveo.model.module.MeveoModuleItem;
+import org.meveo.model.persistence.JacksonUtil;
 import org.meveo.security.MeveoUser;
 import org.meveo.service.admin.impl.MeveoModuleService;
 import org.meveo.service.crm.impl.CurrentUserProducer;
-import org.meveo.service.script.Script;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class GetModelsScript extends Script {
+public class GetModelsScript extends EndpointScript {
 	public static final String CRLF = "\r\n";
 	public static final String TAB = "\t";
 	private static final String LOCALHOST = "http://localhost:8080/";
@@ -81,17 +83,17 @@ public class GetModelsScript extends Script {
 			LOG.debug("entityCodes: {}", entityCodes);
 
 			try {
-				// using user role and permissions, figure out which entities are allowed to be exported
+				// using user role and permissions, figure out which entities are allowed to be
+				// exported
 				LOG.debug("user.getRoles(): {}", user.getRoles());
 				List<String> permissions = user.getRoles().stream().filter(role -> role.startsWith("CE_"))
 						.collect(Collectors.toList());
 				LOG.debug("permissions: {}", permissions);
 
-				List<String> allowedEntities =
-						entityCodes.stream()
-								.filter(entityCode -> permissions.stream()
-										.anyMatch(permission -> permission.contains(entityCode)))
-								.collect(Collectors.toList());
+				List<String> allowedEntities = entityCodes.stream()
+						.filter(entityCode -> permissions.stream()
+								.anyMatch(permission -> permission.contains(entityCode)))
+						.collect(Collectors.toList());
 				LOG.debug("allowedEntities: {}", allowedEntities);
 
 				List<EntityPermission> entityPermissions = allowedEntities.stream()
@@ -105,50 +107,66 @@ public class GetModelsScript extends Script {
 						})
 						.collect(Collectors.toList());
 				LOG.debug("entityPermissions: {}", entityPermissions);
+				String acceptHeader = endpointRequest.getHeader("Accept");
+				if (acceptHeader != null && acceptHeader.equals("application/json")) {
+					Map<String, Object> resultMap = new HashMap<>();
+					resultMap.put("MODELS", allowedEntities);
 
-				// generate model index.js
-				StringBuilder modelIndexImports = new StringBuilder();
+					Map<String, List<String>> ENTITY_PERMISSIONS = new HashMap<>();
+					resultMap.put("ENTITY_PERMISSIONS", ENTITY_PERMISSIONS);
 
-				for (String entityCode : allowedEntities) {
-					String modelImport = String.format(IMPORT_STATEMENT, entityCode, schemaPath, entityCode);
-					LOG.debug("modelImport: {}", modelImport);
-					modelIndexImports.append(modelImport).append(CRLF);
-				}
-				modelIndexImports
-						.append(CRLF)
-						.append("export const MODELS = [ ")
-						.append(CRLF)
-						.append(TAB)
-						.append(String.join(", ", allowedEntities))
-						.append(CRLF)
-						.append(" ];")
-						.append(CRLF);
+					for (EntityPermission entityPermission : entityPermissions) {
+						ENTITY_PERMISSIONS.put(entityPermission.getEntityCode(), entityPermission.getPermissions());
+					}
 
-				modelIndexImports
-						.append(CRLF)
-						.append("export const ENTITY_PERMISSIONS = { ");
+					result = JacksonUtil.toStringPrettyPrinted(resultMap);
+					endpointResponse.setContentType("application/json");
 
-				for (EntityPermission entityPermission : entityPermissions) {
-					String availablePermissions = String.join(", ", entityPermission.getPermissions().stream()
-							.map(permission -> "\"" + permission + "\"")
-							.collect(Collectors.toList()));
+				} else {
+					// generate model index.js
+					StringBuilder modelIndexImports = new StringBuilder();
+
+					for (String entityCode : allowedEntities) {
+						String modelImport = String.format(IMPORT_STATEMENT, entityCode, schemaPath, entityCode);
+						LOG.debug("modelImport: {}", modelImport);
+						modelIndexImports.append(modelImport).append(CRLF);
+					}
 					modelIndexImports
 							.append(CRLF)
-							.append(TAB)
-							.append(entityPermission.getEntityCode())
-							.append(": [ ")
+							.append("export const MODELS = [ ")
 							.append(CRLF)
 							.append(TAB)
-							.append(TAB)
-							.append(availablePermissions)
+							.append(String.join(", ", allowedEntities))
 							.append(CRLF)
-							.append(TAB)
-							.append(" ], ");
-				}
-				modelIndexImports.append(CRLF).append("};").append(CRLF);
+							.append(" ];")
+							.append(CRLF);
 
-				// return model index.js
-				result = modelIndexImports.toString();
+					modelIndexImports
+							.append(CRLF)
+							.append("export const ENTITY_PERMISSIONS = { ");
+
+					for (EntityPermission entityPermission : entityPermissions) {
+						String availablePermissions = String.join(", ", entityPermission.getPermissions().stream()
+								.map(permission -> "\"" + permission + "\"")
+								.collect(Collectors.toList()));
+						modelIndexImports
+								.append(CRLF)
+								.append(TAB)
+								.append(entityPermission.getEntityCode())
+								.append(": [ ")
+								.append(CRLF)
+								.append(TAB)
+								.append(TAB)
+								.append(availablePermissions)
+								.append(CRLF)
+								.append(TAB)
+								.append(" ], ");
+					}
+					modelIndexImports.append(CRLF).append("};").append(CRLF);
+
+					// return model index.js
+					result = modelIndexImports.toString();
+				}
 
 			} catch (Exception exception) {
 				throw new BusinessException(exception);
@@ -159,7 +177,6 @@ public class GetModelsScript extends Script {
 		LOG.debug("END - GetModelsScript.execute()");
 	}
 }
-
 
 class EntityPermission {
 	private String entityCode;
