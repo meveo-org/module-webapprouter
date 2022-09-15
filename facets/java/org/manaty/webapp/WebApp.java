@@ -118,6 +118,13 @@ public class WebApp extends Script {
         } else {
             rootPath = webappPath + this.appCode + AFFIX;
         }
+
+
+        WebApplication app = crossStorageApi.find(repository, WebApplication.class).by("code", this.appCode).getResult();
+        if (app.getROOT_PATH() != null && remainingPath.endsWith("index.html")) {
+            rootPath = new File(rootPath, app.getROOT_PATH()).getPath();
+        }
+
         try {
             // we first try to get the file from file explorer under the webapp/appCode/
             // directory
@@ -127,12 +134,14 @@ public class WebApp extends Script {
                 GitRepository uiRepo = gitRepositoryService.findByCode(this.appCode + AFFIX);
                 File repositoryDir = GitHelper.getRepositoryDir(null, uiRepo);
                 rootPath = repositoryDir.getPath().toString();
+                if (app.getROOT_PATH() != null && remainingPath.endsWith("index.html")) {
+                    rootPath = new File(rootPath, app.getROOT_PATH()).getPath();
+                }
+                
                 file = lookupFile(rootPath, remainingPath);
                 // file still doesnt exist, we build it
                 if (file == null) {
                     LOG.info("File not found in git, we build it");
-                    WebApplication app = crossStorageApi.find(repository, WebApplication.class).by("code", this.appCode)
-                            .getResult();
                     CustomEntityInstance instance = crossStorageApi.find(repository, app.getUuid(), app.getCetCode());
                     result = org.manaty.webapp.HtmlApplicationSerializer.getHtml(instance, remainingPath, ceiService);
                     return;

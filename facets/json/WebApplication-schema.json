@@ -4,5 +4,70 @@
     "$schema": "http://json-schema.org/draft-07/schema",
     "id": "WebApplication",
     "title": "Web Application",
-    "type": "object"
+    "type": "object",
+    "properties": {
+        "code": {
+            "storages": ["SQL"],
+            "nullable": false,
+            "minLength": 1,
+            "description": "Code",
+            "readOnly": false,
+            "versionable": false,
+            "id": "CE_WebApplication_code",
+            "title": "WebApplication.code",
+            "type": "string",
+            "maxLength": 255
+        },
+        "entities": {
+            "storages": ["SQL"],
+            "nullable": true,
+            "uniqueItems": true,
+            "description": "Entities included in the Web Application",
+            "readOnly": false,
+            "versionable": false,
+            "id": "CE_WebApplication_entities",
+            "title": "WebApplication.entities",
+            "type": "array",
+            "items": {
+                "id": "CE_WebApplication_entities_item",
+                "title": "WebApplication.entities item",
+                "type": "string",
+                "maxLength": 255
+            }
+        },
+        "ROOT_PATH": {
+            "storages": ["SQL"],
+            "nullable": true,
+            "description": "Root path of Web Application",
+            "readOnly": false,
+            "versionable": false,
+            "id": "CE_WebApplication_ROOT_PATH",
+            "title": "WebApplication.ROOT_PATH",
+            "type": "string",
+            "maxLength": 2000
+        },
+        "label": {
+            "storages": ["SQL"],
+            "nullable": true,
+            "description": "Label",
+            "readOnly": false,
+            "versionable": false,
+            "id": "CE_WebApplication_label",
+            "title": "WebApplication.label",
+            "type": "string",
+            "maxLength": 255
+        },
+        "BASE_URL": {
+            "storages": ["SQL"],
+            "nullable": true,
+            "description": "Base URL",
+            "readOnly": false,
+            "versionable": false,
+            "id": "CE_WebApplication_BASE_URL",
+            "title": "WebApplication.BASE_URL",
+            "type": "string",
+            "maxLength": 255
+        }
+    },
+    "required": ["code"]
 }
