@@ -1,0 +1,1 @@
+{"code":"compile","appliesTo":"CE_WebApplication","label":"Compile","script":"org.meveo.script.CompileApp","guiPosition":"tab:Web Application:0;action:5","applicableToEntityList":false,"applicableToEntityInstance":true,"scriptParameters":{}}
