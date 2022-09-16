@@ -5,6 +5,7 @@ import java.util.List;
 import org.meveo.model.persistence.DBStorageType;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import java.util.ArrayList;
+import org.meveo.model.git.GitRepository;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 
 public class WebApplication implements CustomEntity {
@@ -21,6 +22,8 @@ public class WebApplication implements CustomEntity {
     @JsonIgnore()
     private DBStorageType storages;
 
+    private Boolean autoUpdate;
+
     @JsonProperty(required = true)
     private String code;
 
@@ -31,6 +34,8 @@ public class WebApplication implements CustomEntity {
     private String label;
 
     private String BASE_URL;
+
+    private GitRepository repository;
 
     @Override()
     public String getUuid() {
@@ -47,6 +52,14 @@ public class WebApplication implements CustomEntity {
 
     public void setStorages(DBStorageType storages) {
         this.storages = storages;
+    }
+
+    public Boolean getAutoUpdate() {
+        return autoUpdate;
+    }
+
+    public void setAutoUpdate(Boolean autoUpdate) {
+        this.autoUpdate = autoUpdate;
     }
 
     public String getCode() {
@@ -87,6 +100,14 @@ public class WebApplication implements CustomEntity {
 
     public void setBASE_URL(String BASE_URL) {
         this.BASE_URL = BASE_URL;
+    }
+
+    public GitRepository getRepository() {
+        return repository;
+    }
+
+    public void setRepository(GitRepository repository) {
+        this.repository = repository;
     }
 
     @Override()

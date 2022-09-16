@@ -1,0 +1,17 @@
+{
+  "active" : true,
+  "code" : "WebappAutoUpdateJob",
+  "customFields" : {
+    "customField" : [ {
+      "code" : "ScriptingJob_script",
+      "entityReferenceValue" : {
+        "classname" : "org.meveo.model.scripts.ScriptInstance",
+        "code" : "org.meveo.script.AutoUpdateJob",
+        "id" : 542
+      }
+    } ]
+  },
+  "jobCategory" : "MEDIATION",
+  "jobTemplate" : "ScriptingJob",
+  "limitToSingleNode" : true
+}

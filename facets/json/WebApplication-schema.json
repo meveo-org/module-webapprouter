@@ -6,6 +6,17 @@
     "title": "Web Application",
     "type": "object",
     "properties": {
+        "autoUpdate": {
+            "storages": ["SQL"],
+            "default": "false",
+            "nullable": true,
+            "description": "Pull changes every hour",
+            "readOnly": false,
+            "versionable": false,
+            "id": "CE_WebApplication_autoUpdate",
+            "title": "WebApplication.autoUpdate",
+            "type": "boolean"
+        },
         "code": {
             "storages": ["SQL"],
             "nullable": false,
@@ -67,6 +78,16 @@
             "title": "WebApplication.BASE_URL",
             "type": "string",
             "maxLength": 255
+        },
+        "repository": {
+            "storages": ["SQL"],
+            "nullable": true,
+            "description": "Git repository holding the frontend",
+            "readOnly": false,
+            "versionable": false,
+            "id": "CE_WebApplication_repository",
+            "title": "WebApplication.repository",
+            "$ref": "#/definitions/org.meveo.model.git.GitRepository"
         }
     },
     "required": ["code"]
