@@ -29,6 +29,8 @@ public class WebApplication implements CustomEntity {
 
     private List<String> entities = new ArrayList<>();
 
+    private String srcPath;
+
     private String ROOT_PATH;
 
     private String label;
@@ -76,6 +78,14 @@ public class WebApplication implements CustomEntity {
 
     public void setEntities(List<String> entities) {
         this.entities = entities;
+    }
+
+    public String getSrcPath() {
+        return srcPath;
+    }
+
+    public void setSrcPath(String srcPath) {
+        this.srcPath = srcPath;
     }
 
     public String getROOT_PATH() {

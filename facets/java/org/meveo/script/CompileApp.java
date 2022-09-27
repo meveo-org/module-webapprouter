@@ -16,6 +16,7 @@ import org.meveo.service.script.Script;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import java.io.InputStreamReader;
+import org.meveo.commons.utils.StringUtils;
 
 public class CompileApp extends Script {
 
@@ -32,15 +33,16 @@ public class CompileApp extends Script {
 
         GitRepository uiRepo = gitRepositoryService.findByCode(repository.getCode());
 
-        
         LOG.info("Compiling files in repository {}", uiRepo.getCode());
 
-        File uiDir = GitHelper.getRepositoryDir(null, uiRepo);
+        File gitDir = GitHelper.getRepositoryDir(null, uiRepo);
+        File uiDir = StringUtils.isNotBlank(webapp.get("srcPath")) ? new File(gitDir, webapp.get("srcPath")) : gitDir;
 
         try {
             // Create .env file
             File env = new File(uiDir, ".env");
             String envContent = "webContext=" + ParamBean.getInstance().getProperty("meveo.moduleName", "meveo");
+            envContent += "\n" + "authServer=" +  System.getProperty("meveo.keycloak.url");
             MeveoFileUtils.writeAndPreserveCharset(envContent, env);
 
             // Install dependencies

@@ -46,6 +46,17 @@
                 "maxLength": 255
             }
         },
+        "srcPath": {
+            "storages": ["SQL"],
+            "nullable": true,
+            "description": "Source folder path",
+            "readOnly": false,
+            "versionable": false,
+            "id": "CE_WebApplication_srcPath",
+            "title": "WebApplication.srcPath",
+            "type": "string",
+            "maxLength": 500
+        },
         "ROOT_PATH": {
             "storages": ["SQL"],
             "nullable": true,
