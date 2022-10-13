@@ -37,6 +37,12 @@ public class CompileApp extends Script {
 
         File gitDir = GitHelper.getRepositoryDir(null, uiRepo);
         File uiDir = StringUtils.isNotBlank(webapp.get("srcPath")) ? new File(gitDir, webapp.get("srcPath")) : gitDir;
+	    
+	String rootPath = webapp.get("ROOT_PATH");
+    	if (StringUtils.isNotBlank(rootPath)) {
+	  File rootDir = new File(gitDir, rootPath);
+	  rootDir.mkdirs();
+	}
 
         try {
             // Create .env file
