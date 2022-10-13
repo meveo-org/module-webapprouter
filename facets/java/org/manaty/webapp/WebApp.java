@@ -54,7 +54,6 @@ public class WebApp extends Script {
     private static final String ENDPOINT_URL = "/rest/webapp/";
     private static final String INDEX_FILE = "index.html";
     private static final String PNG_TYPE = "image/png";
-    private static final String AFFIX = "-UI";
     private static final String DEFAULT_ICON = "https://avatars1.githubusercontent.com/u/59589948?s=200&v=4";
     private static final String INDEX_REPLACE_START = "<!-- REPLACE TEMPLATE SECTION START -->";
     private static final String INDEX_REPLACE_END = "<!-- REPLACE TEMPLATE SECTION END -->";
@@ -74,22 +73,24 @@ public class WebApp extends Script {
     private Repository repository = repositoryService.findDefaultRepository();
 
     private EndpointRequest request;
-    private String basePath;
-    private String webappPath;
+    private final String webappRouterTargetDirectory;
     private Object result = "";
-    private String appCode = "";
+    private String appCode = null;
+    private WebApplication app;
+	private static boolean webappRouterTargetDirectoryChecked = false;
 
     public WebApp() {
-        basePath = config.getProperty("providers.rootDir", File.separator + "meveodata");
-        String rootDirectory = config.getProperty("provider.rootDir", "default");
-        basePath += File.separator + rootDirectory + File.separator;
-        webappPath = basePath + "webapp" + File.separator;
-        LOG.info("basePath: {}", basePath);
-        LOG.info("webappPath: {}", basePath);
-        File path = new File(webappPath);
-        if (!path.exists()) {
+        String meveoProviderBaseDirectory = config.getProperty("providers.rootDir", File.separator + "meveodata");
+        String providerRootDirectory = config.getProperty("provider.rootDir", "default");
+        meveoProviderBaseDirectory += File.separator + providerRootDirectory + File.separator;
+        webappRouterTargetDirectory = meveoProviderBaseDirectory + "webapp" + File.separator;
+        LOG.info("webappRouterTargetDirectory: {}", webappRouterTargetDirectory);
+        File path = new File(webappRouterTargetDirectory);
+        if (!webappRouterTargetDirectoryChecked && !path.exists()) {
             path.mkdirs();
-        }
+			if (path.exists())
+			 webappRouterTargetDirectoryChecked = true;
+        } 
     }
 
     public Object getResult() {
@@ -111,33 +112,40 @@ public class WebApp extends Script {
         String remainingPath = request.getRemainingPath();
         LOG.info("appCode: " + this.appCode);
         LOG.info("remainingPath: " + remainingPath);
-        String appPath = "/" + this.appCode + AFFIX;
+
+
+
+        app = crossStorageApi.find(repository, WebApplication.class).by("code", this.appCode).getResult();
+     LOG.info("repo: " + app.getRepository().getClass());
+     LOG.info("repoCode: " + app.getRepository().getCode());
+     LOG.info("repoId: " + app.getRepository().getId());
+		app.setRepository(gitRepositoryService.findById(app.getRepository().getId()));
+      
+        String appPath = "/" + app.getRepository().getCode();
         String rootPath = null;
         if (remainingPath.equalsIgnoreCase(appPath)) {
-            rootPath = webappPath;
+            rootPath = webappRouterTargetDirectory;
         } else {
-            rootPath = webappPath + this.appCode + AFFIX;
+            rootPath = webappRouterTargetDirectory + app.getRepository().getCode();
         }
-
-
-        WebApplication app = crossStorageApi.find(repository, WebApplication.class).by("code", this.appCode).getResult();
-        if (app.getROOT_PATH() != null && remainingPath.endsWith("index.html")) {
+      
+        if (app.getROOT_PATH() != null /*&& remainingPath.endsWith("index.html")*/) {
             rootPath = new File(rootPath, app.getROOT_PATH()).getPath();
         }
 
+      
         try {
             // we first try to get the file from file explorer under the webapp/appCode/
             // directory
             File file = lookupFile(rootPath, remainingPath);
             if (file == null) {
-                LOG.info("File not found in webapp, we look in git");
-                GitRepository uiRepo = gitRepositoryService.findByCode(this.appCode + AFFIX);
-                File repositoryDir = GitHelper.getRepositoryDir(null, uiRepo);
+                File repositoryDir = GitHelper.getRepositoryDir(null, app.getRepository());
                 rootPath = repositoryDir.getPath().toString();
-                if (app.getROOT_PATH() != null && remainingPath.endsWith("index.html")) {
+                 if (app.getROOT_PATH() != null /*&& remainingPath.endsWith("index.html")*/) {
                     rootPath = new File(rootPath, app.getROOT_PATH()).getPath();
                 }
-                
+                LOG.info("File not found in webapp, we look in git : " + rootPath);
+               
                 file = lookupFile(rootPath, remainingPath);
                 // file still doesnt exist, we build it
                 if (file == null) {
@@ -171,8 +179,14 @@ public class WebApp extends Script {
                 LOG.info("Attempt to load index.html from " + rootPath);
                 String baseIndexPath = rootPath + File.separator;
                 File indexTemplate = new File(baseIndexPath + INDEX_FILE);
-                GitRepository uiRepo = gitRepositoryService.findByCode(this.appCode + AFFIX);
-                String repoPath = GitHelper.getRepositoryDir(null, uiRepo).toPath().toString();
+
+				
+				File repositoryDir = GitHelper.getRepositoryDir(null, app.getRepository());
+                 String repoPath = repositoryDir.getPath().toString();
+                 if (app.getROOT_PATH() != null ) {
+                    repoPath = new File(repoPath, app.getROOT_PATH()).getPath();
+                }
+				
                 String rootIndex = repoPath + File.separator + INDEX_FILE;
                 boolean isAppIndex = indexTemplate.getAbsolutePath().contains(rootIndex);
 
