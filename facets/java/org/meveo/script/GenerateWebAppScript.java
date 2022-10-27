@@ -438,7 +438,7 @@ public class GenerateWebAppScript extends Script {
 			LOG.debug("GENERATE MODEL FILES");
 			String destination = transformer.getDestination().toString();
 			for (String entityCode : transformer.getEntityCodes()) {
-				String entityName = WebAppScriptHelper.toPascalName(entityCode);
+				String entityName = entityCode;
 				String outputFileName = entityName + ".js";
 				String destinationName = destination.replace(PAGE_TEMPLATE, outputFileName);
 				LOG.debug("output file name: {}", destinationName);
