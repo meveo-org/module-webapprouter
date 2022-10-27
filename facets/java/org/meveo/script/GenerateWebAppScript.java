@@ -127,7 +127,7 @@ public class GenerateWebAppScript extends Script {
 		String remoteUrl = appConfig.getProperty("meveo.git.directory.remote.url", null);
 		String remoteUsername = appConfig.getProperty("meveo.git.directory.remote.username", null);
 		String remotePassword = appConfig.getProperty("meveo.git.directory.remote.password", null);
-		String appContext = appConfig.getProperty("meveo.admin.webContext", "");
+		String appContext = appConfig.getProperty("meveo.moduleName", "meveo");
 		String serverUrl = appConfig.getProperty("meveo.admin.baseUrl", null);
 		String keycloakUrl = System.getProperty("meveo.keycloak.url");
 		String keycloakRealm = System.getProperty("meveo.keycloak.realm");
@@ -648,7 +648,7 @@ class FileTransformer {
 			for (String entityCode : this.entityCodes) {
 				String outputContent = searchAndReplace(substitutes, fileContent, entityCode);
 				String outputFileName =
-						destination.toString().replace("Parent", WebAppScriptHelper.toPascalName(entityCode));
+						destination.toString().replace("Parent", entityCode);
 				LOG.debug("output file name: {}", outputFileName);
 				File outputFile = new File(outputFileName);
 				FileUtils.write(outputFile, outputContent, StandardCharsets.UTF_8);

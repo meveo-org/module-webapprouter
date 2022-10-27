@@ -195,24 +195,25 @@ public class WebApp extends Script {
                 LOG.info("rootIndex: {}", rootIndex);
                 LOG.info("isAppIndex: {}", isAppIndex);
                 if (isAppIndex) {
-                    File generatedIndex = new File(baseIndexPath + "generated_index.html");
-                    if (!generatedIndex.exists()) {
-                        String indexContents = new String(Files.readAllBytes(indexTemplate.toPath()));
-                        int start = indexContents.indexOf(INDEX_REPLACE_START);
-                        int end = indexContents.indexOf(INDEX_REPLACE_END);
-                        String topContent = indexContents.substring(0, start);
-                        String endContent = indexContents.substring(end + INDEX_REPLACE_END.length());
-                        String title = String.format(TITLE_TEMPLATE, WebAppScriptHelper.toTitleName(this.appCode));
-                        String iconType = PNG_TYPE;
-                        String iconUrl = DEFAULT_ICON;
-                        String favIcon = String.format(FAVICON_TEMPLATE, iconType, iconUrl);
-                        String contextPath = request.getContextPath() + ENDPOINT_URL + this.appCode + "/";
-                        String baseUrl = String.format(BASEURL_TEMPLATE, contextPath);
-                        String newContent = topContent + CRLF + title + CRLF + favIcon + CRLF + baseUrl + CRLF
-                                + endContent;
-                        FileUtils.writeStringToFile(generatedIndex, newContent);
-                    }
-                    file = generatedIndex;
+                	return new File(rootIndex);
+//                    File generatedIndex = new File(baseIndexPath + "generated_index.html");
+//                    if (!generatedIndex.exists()) {
+//                        String indexContents = new String(Files.readAllBytes(indexTemplate.toPath()));
+//                        int start = indexContents.indexOf(INDEX_REPLACE_START);
+//                        int end = indexContents.indexOf(INDEX_REPLACE_END);
+//                        String topContent = indexContents.substring(0, start);
+//                        String endContent = indexContents.substring(end + INDEX_REPLACE_END.length());
+//                        String title = String.format(TITLE_TEMPLATE, WebAppScriptHelper.toTitleName(this.appCode));
+//                        String iconType = PNG_TYPE;
+//                        String iconUrl = DEFAULT_ICON;
+//                        String favIcon = String.format(FAVICON_TEMPLATE, iconType, iconUrl);
+//                        String contextPath = request.getContextPath() + ENDPOINT_URL + this.appCode + "/";
+//                        String baseUrl = String.format(BASEURL_TEMPLATE, contextPath);
+//                        String newContent = topContent + CRLF + title + CRLF + favIcon + CRLF + baseUrl + CRLF
+//                                + endContent;
+//                        FileUtils.writeStringToFile(generatedIndex, newContent);
+//                    }
+//                    file = generatedIndex;
                 }
             }
             // if an index.html file does not exist in both rootPath and subdirectory, we
