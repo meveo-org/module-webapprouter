@@ -49,6 +49,7 @@ public class CompileApp extends Script {
             File env = new File(uiDir, ".env");
             String envContent = "webContext=" + ParamBean.getInstance().getProperty("meveo.moduleName", "meveo");
             envContent += "\n" + "authServer=" +  System.getProperty("meveo.keycloak.url");
+            envContent += "\n" + "module=" + webAppCode;
             MeveoFileUtils.writeAndPreserveCharset(envContent, env);
 
             // Install dependencies
