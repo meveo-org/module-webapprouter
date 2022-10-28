@@ -76,6 +76,7 @@ public class GenerateWebAppScript extends Script {
 	private static final String KEYCLOAK_REALM = "meveo";
 	private static final String KEYCLOAK_RESOURCE = "meveo-web";
 	private static final String MODULE_CODE = "MODULE_CODE";
+	private static final String WEB_CONTEXT = "WEB_CONTEXT";
 	private static final String AFFIX = "-UI";
 	private static final Logger LOG = LoggerFactory.getLogger(GenerateWebAppScript.class);
 	private String CRLF = WebAppScriptHelper.CRLF;
@@ -259,6 +260,7 @@ public class GenerateWebAppScript extends Script {
 							Map<String, String> substitutionMap = new HashMap<>();
 							substitutionMap.put(MODULE_CODE, moduleCode);
 							substitutionMap.put(LOCALHOST, serverUrl);
+							substitutionMap.put(WEB_CONTEXT, "/" + appContext);
 							filesToCommit
 									.add(this.searchAndReplace(sourceFile, destinationFile, substitutionMap));
 						} else if (isKeycloakFile && serverUrl != null) {
@@ -374,30 +376,30 @@ public class GenerateWebAppScript extends Script {
 		if (source.contains("ListPage.js")) {
 			LOG.debug("GENERATE LIST PAGE");
 			substitutes
-					.add(new Substitute("ParentEntityListPage", "%sListPage", WebAppScriptHelper.PASCAL));
+					.add(new Substitute("ParentEntityListPage", "%sListPage", WebAppScriptHelper.IDENTITY));
 			substitutes
 					.add(new Substitute("parent-entity-list-page", "%s-list-page", WebAppScriptHelper.TAG));
-			substitutes.add(new Substitute(PARENT, "%s", WebAppScriptHelper.PASCAL));
+			substitutes.add(new Substitute(PARENT, "%s", WebAppScriptHelper.IDENTITY));
 			substitutes.add(new Substitute("GET", "POST", WebAppScriptHelper.CONSTANT));
 			files = transformer.generateFiles(substitutes);
 		}
 		if (source.contains("NewPage.js")) {
 			LOG.debug("GENERATE NEW PAGE");
 			substitutes
-					.add(new Substitute("ParentEntityNewPage", "%sNewPage", WebAppScriptHelper.PASCAL));
+					.add(new Substitute("ParentEntityNewPage", "%sNewPage", WebAppScriptHelper.IDENTITY));
 			substitutes
 					.add(new Substitute("parent-entity-new-page", "%s-new-page", WebAppScriptHelper.TAG));
-			substitutes.add(new Substitute(PARENT, "%s", WebAppScriptHelper.PASCAL));
+			substitutes.add(new Substitute(PARENT, "%s", WebAppScriptHelper.IDENTITY));
 			files = transformer.generateFiles(substitutes);
 
 		}
 		if (source.contains("UpdatePage.js")) {
 			LOG.debug("GENERATE UPDATE PAGE");
 			substitutes
-					.add(new Substitute("ParentEntityUpdatePage", "%sUpdatePage", WebAppScriptHelper.PASCAL));
+					.add(new Substitute("ParentEntityUpdatePage", "%sUpdatePage", WebAppScriptHelper.IDENTITY));
 			substitutes.add(
 					new Substitute("parent-entity-update-page", "%s-update-page", WebAppScriptHelper.TAG));
-			substitutes.add(new Substitute(PARENT, "%s", WebAppScriptHelper.PASCAL));
+			substitutes.add(new Substitute(PARENT, "%s", WebAppScriptHelper.IDENTITY));
 			files = transformer.generateFiles(substitutes);
 		}
 		return files;
@@ -497,7 +499,8 @@ public class GenerateWebAppScript extends Script {
 				refSchemas.append("\t];").append(CRLF);
 
 				ctorContents.append("\tconstructor(auth){").append(CRLF);
-				ctorContents.append("\t\tsuper(auth);").append(CRLF);
+				ctorContents.append("\t\tsuper(auth, code);").append(CRLF);
+				ctorContents.append("\t\tthis.normalizedCode = \"").append(WebAppScriptHelper.toTagName(entityName)).append("\";").append(CRLF);
 				ctorContents.append("\t\tthis.code = code;").append(CRLF);
 				ctorContents.append("\t\tthis.label = label;").append(CRLF);
 				ctorContents.append("\t\tthis.formFields = formFields;").append(CRLF);
@@ -1027,6 +1030,8 @@ class WebAppScriptHelper {
 	static final String toConstantName(String input) {
 		return convert(input, UPPER_CASE, UNDERSCORE);
 	}
+
+	static final UnaryOperator<String> IDENTITY = (input) -> input;
 
 	static final UnaryOperator<String> CONSTANT = WebAppScriptHelper::toConstantName;
 

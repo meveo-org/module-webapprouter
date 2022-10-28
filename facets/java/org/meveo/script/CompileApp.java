@@ -98,7 +98,7 @@ public class CompileApp extends Script {
             }
 
             processBuilder = new ProcessBuilder()
-                .command("bash", "-c", "npm exec -c 'webpack'")
+                .command("bash", "-c", "npm run build-prod")
                 .directory(uiDir)
 				.redirectErrorStream(true);
 
