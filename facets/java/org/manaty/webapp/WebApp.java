@@ -15,11 +15,10 @@
  */
 package org.manaty.webapp;
 
-import org.apache.commons.io.FileUtils;
 import org.meveo.api.exception.EntityDoesNotExistsException;
 import org.meveo.api.persistence.CrossStorageApi;
-import org.meveo.api.rest.technicalservice.impl.EndpointResponse;
 import org.meveo.api.rest.technicalservice.impl.EndpointRequest;
+import org.meveo.api.rest.technicalservice.impl.EndpointResponse;
 import org.meveo.commons.utils.ParamBean;
 import org.meveo.commons.utils.ParamBeanFactory;
 import org.meveo.model.crm.EntityReferenceWrapper;
@@ -34,11 +33,11 @@ import org.meveo.service.script.Script;
 import org.meveo.service.storage.RepositoryService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import java.io.File;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.io.IOException;
 import java.net.URLDecoder;
+import java.nio.file.Files;
 import java.util.Arrays;
 import java.util.Map;
 import java.util.function.UnaryOperator;
@@ -77,7 +76,7 @@ public class WebApp extends Script {
     private Object result = "";
     private String appCode = null;
     private WebApplication app;
-	private static boolean webappRouterTargetDirectoryChecked = false;
+    private static boolean webappRouterTargetDirectoryChecked = false;
 
     public WebApp() {
         String meveoProviderBaseDirectory = config.getProperty("providers.rootDir", File.separator + "meveodata");
@@ -88,9 +87,9 @@ public class WebApp extends Script {
         File path = new File(webappRouterTargetDirectory);
         if (!webappRouterTargetDirectoryChecked && !path.exists()) {
             path.mkdirs();
-			if (path.exists())
-			 webappRouterTargetDirectoryChecked = true;
-        } 
+            if (path.exists())
+                webappRouterTargetDirectoryChecked = true;
+        }
     }
 
     public Object getResult() {
@@ -113,40 +112,48 @@ public class WebApp extends Script {
         LOG.info("appCode: " + this.appCode);
         LOG.info("remainingPath: " + remainingPath);
 
-
-
         app = crossStorageApi.find(repository, WebApplication.class).by("code", this.appCode).getResult();
-     LOG.info("repo: " + app.getRepository().getClass());
-     LOG.info("repoCode: " + app.getRepository().getCode());
-     LOG.info("repoId: " + app.getRepository().getId());
-		app.setRepository(gitRepositoryService.findById(app.getRepository().getId()));
-      
-        String appPath = "/" + app.getRepository().getCode();
+
+        if (app == null) {
+            LOG.error("WebApplication with code: {}, does not exist.", this.appCode);
+            response.setStatus(400);
+            result = "Encountered error while trying to load " + remainingPath;
+            return;
+        }
+
+        GitRepository appGitRepository = app.getRepository();
+        appGitRepository = gitRepositoryService.findById(appGitRepository.getId());
+        app.setRepository(appGitRepository);
+        LOG.info("repo: " + appGitRepository.getClass());
+        LOG.info("repoCode: " + appGitRepository.getCode());
+        LOG.info("repoId: " + appGitRepository.getId());
+
+        String appPath = "/" + appGitRepository.getCode();
         String rootPath = null;
         if (remainingPath.equalsIgnoreCase(appPath)) {
             rootPath = webappRouterTargetDirectory;
         } else {
-            rootPath = webappRouterTargetDirectory + app.getRepository().getCode();
+            rootPath = webappRouterTargetDirectory + appGitRepository.getCode();
         }
-      
-        if (app.getROOT_PATH() != null /*&& remainingPath.endsWith("index.html")*/) {
+
+        if (app.getROOT_PATH() != null) {
             rootPath = new File(rootPath, app.getROOT_PATH()).getPath();
         }
 
-      
+
         try {
             // we first try to get the file from file explorer under the webapp/appCode/
             // directory
             File file = lookupFile(rootPath, remainingPath);
             if (file == null) {
-                File repositoryDir = GitHelper.getRepositoryDir(null, app.getRepository());
+                LOG.info("File not found in webapp, we look in git : " + rootPath);
+                File repositoryDir = GitHelper.getRepositoryDir(null, appGitRepository);
                 rootPath = repositoryDir.getPath().toString();
-                 if (app.getROOT_PATH() != null /*&& remainingPath.endsWith("index.html")*/) {
+                if (app.getROOT_PATH() != null) {
                     rootPath = new File(rootPath, app.getROOT_PATH()).getPath();
                 }
-                LOG.info("File not found in webapp, we look in git : " + rootPath);
-               
                 file = lookupFile(rootPath, remainingPath);
+
                 // file still doesnt exist, we build it
                 if (file == null) {
                     LOG.info("File not found in git, we build it");
@@ -164,8 +171,9 @@ public class WebApp extends Script {
 
     private File lookupFile(String rootPath, String remainingPath) throws java.io.IOException {
         // load the file as-is at first
-        File file = new File(rootPath, URLDecoder.decode(remainingPath, "UTF-8"));
         LOG.info("Looking for " + remainingPath + " in " + rootPath);
+        File file = new File(rootPath, URLDecoder.decode(remainingPath, "UTF-8"));
+
         // we attempt to load the index.html from the directory first.
         if (!file.exists() || file.isDirectory()) {
             if (file.isDirectory()) {
@@ -180,13 +188,13 @@ public class WebApp extends Script {
                 String baseIndexPath = rootPath + File.separator;
                 File indexTemplate = new File(baseIndexPath + INDEX_FILE);
 
-				
-				File repositoryDir = GitHelper.getRepositoryDir(null, app.getRepository());
-                 String repoPath = repositoryDir.getPath().toString();
-                 if (app.getROOT_PATH() != null ) {
+
+                File repositoryDir = GitHelper.getRepositoryDir(null, app.getRepository());
+                String repoPath = repositoryDir.getPath().toString();
+                if (app.getROOT_PATH() != null) {
                     repoPath = new File(repoPath, app.getROOT_PATH()).getPath();
                 }
-				
+
                 String rootIndex = repoPath + File.separator + INDEX_FILE;
                 boolean isAppIndex = indexTemplate.getAbsolutePath().contains(rootIndex);
 
@@ -195,25 +203,7 @@ public class WebApp extends Script {
                 LOG.info("rootIndex: {}", rootIndex);
                 LOG.info("isAppIndex: {}", isAppIndex);
                 if (isAppIndex) {
-                	return new File(rootIndex);
-//                    File generatedIndex = new File(baseIndexPath + "generated_index.html");
-//                    if (!generatedIndex.exists()) {
-//                        String indexContents = new String(Files.readAllBytes(indexTemplate.toPath()));
-//                        int start = indexContents.indexOf(INDEX_REPLACE_START);
-//                        int end = indexContents.indexOf(INDEX_REPLACE_END);
-//                        String topContent = indexContents.substring(0, start);
-//                        String endContent = indexContents.substring(end + INDEX_REPLACE_END.length());
-//                        String title = String.format(TITLE_TEMPLATE, WebAppScriptHelper.toTitleName(this.appCode));
-//                        String iconType = PNG_TYPE;
-//                        String iconUrl = DEFAULT_ICON;
-//                        String favIcon = String.format(FAVICON_TEMPLATE, iconType, iconUrl);
-//                        String contextPath = request.getContextPath() + ENDPOINT_URL + this.appCode + "/";
-//                        String baseUrl = String.format(BASEURL_TEMPLATE, contextPath);
-//                        String newContent = topContent + CRLF + title + CRLF + favIcon + CRLF + baseUrl + CRLF
-//                                + endContent;
-//                        FileUtils.writeStringToFile(generatedIndex, newContent);
-//                    }
-//                    file = generatedIndex;
+                    return new File(rootIndex);
                 }
             }
             // if an index.html file does not exist in both rootPath and subdirectory, we
@@ -299,11 +289,11 @@ public class WebApp extends Script {
             acceptsGzip = acceptEncoding != null && accepts(acceptEncoding, "gzip");
             contentType += ";charset=UTF-8";
         } else // the browser, then set to inline, else attachment which will pop a 'save as'
-               // dialogue.
-        if (!contentType.startsWith("image")) {
-            String accept = request.getHeader("Accept");
-            disposition = accept != null && accepts(accept, contentType) ? "inline" : "attachment";
-        }
+            // dialogue.
+            if (!contentType.startsWith("image")) {
+                String accept = request.getHeader("Accept");
+                disposition = accept != null && accepts(accept, contentType) ? "inline" : "attachment";
+            }
         LOG.info(" content-type:" + contentType);
         // Initialize response.
         response.setBufferSize(DEFAULT_BUFFER_SIZE);
@@ -323,6 +313,7 @@ public class WebApp extends Script {
 
     // Helpers (can be refactored to public utility class)
     // ----------------------------------------
+
     /**
      * Returns true if the given accept header accepts the given value.
      *
@@ -334,8 +325,8 @@ public class WebApp extends Script {
         String[] acceptValues = acceptHeader.split("\\s*(,|;)\\s*");
         Arrays.sort(acceptValues);
         return Arrays.binarySearch(acceptValues, toAccept) > -1
-                || Arrays.binarySearch(acceptValues, toAccept.replaceAll("/.*$", "/*")) > -1
-                || Arrays.binarySearch(acceptValues, "*/*") > -1;
+            || Arrays.binarySearch(acceptValues, toAccept.replaceAll("/.*$", "/*")) > -1
+            || Arrays.binarySearch(acceptValues, "*/*") > -1;
     }
 
     /**
@@ -352,6 +343,7 @@ public class WebApp extends Script {
     }
 }
 
+
 class HtmlApplicationSerializer {
 
     static final String docType = "<!DOCTYPE html>";
@@ -366,14 +358,15 @@ class HtmlApplicationSerializer {
             return docType + "<html><body><h1>" + app.getDescription() + "</h1></body></html>";
         }
         Map<String, EntityReferenceWrapper> webpages = (Map<String, EntityReferenceWrapper>) app.getCfValues()
-                .getCfValue("webPages").getMapValue();
+                                                                                                .getCfValue("webPages")
+                                                                                                .getMapValue();
         EntityReferenceWrapper webpage = null;
         if (webpages != null && webpages.containsKey(remainingPath)) {
             webpage = webpages.get(remainingPath);
         }
         if (webpage == null) {
             return docType + "<html><body><h1>Page " + remainingPath + " not found among "
-                    + app.getCfValues().getValues() + "</h1></body></html>";
+                + app.getCfValues().getValues() + "</h1></body></html>";
         }
         StringBuilder result = new StringBuilder();
         result.append(docType).append(ln);
@@ -381,7 +374,9 @@ class HtmlApplicationSerializer {
         result.append("<head>").append(ln);
         if (app.getCfValues().getCfValue("stylesheets") != null) {
             Map<String, EntityReferenceWrapper> stylesheets = (Map<String, EntityReferenceWrapper>) app.getCfValues()
-                    .getCfValue("stylesheets").getListValue();
+                                                                                                       .getCfValue(
+                                                                                                           "stylesheets")
+                                                                                                       .getListValue();
             if (stylesheets != null && stylesheets.size() > 0) {
                 result.append(getStyleSheets(stylesheets));
             }
@@ -394,11 +389,11 @@ class HtmlApplicationSerializer {
     static String getWebpageHtml(EntityReferenceWrapper webpageWrapper) {
         StringBuilder result = new StringBuilder();
         CustomEntityInstance webpage = customEntityInstanceService.findByCodeByCet("ApplicationWebPage",
-                webpageWrapper.getCode());
+            webpageWrapper.getCode());
         result.append("<title>").append(webpage.getDescription()).append("</title>");
         if (webpage.getCfValues().getCfValue("stylesheets") != null) {
             Map<String, EntityReferenceWrapper> stylesheets = (Map<String, EntityReferenceWrapper>) webpage
-                    .getCfValues().getCfValue("stylesheets").getListValue();
+                .getCfValues().getCfValue("stylesheets").getListValue();
             if (stylesheets != null && stylesheets.size() > 0) {
                 result.append(getStyleSheets(stylesheets));
             }
@@ -406,7 +401,7 @@ class HtmlApplicationSerializer {
         result.append("</head>").append(ln);
         if (webpage.getCfValues().getCfValue("body") != null) {
             result.append("<body>").append(ln).append(webpage.getCfValues().getCfValue("body").getStringValue())
-                    .append("</body>").append(ln);
+                  .append("</body>").append(ln);
         }
         return result.toString();
     }
@@ -415,19 +410,20 @@ class HtmlApplicationSerializer {
         StringBuilder result = new StringBuilder();
         for (EntityReferenceWrapper stylesheetWrapper : stylesheets.values()) {
             CustomEntityInstance stylesheet = customEntityInstanceService.findByCodeByCet("CSSStyleSheet",
-                    stylesheetWrapper.getCode());
+                stylesheetWrapper.getCode());
             if (stylesheet.getCfValues().getCfValue("externalURL") != null) {
                 result.append("<link rel=\"stylesheet\" href=\"")
-                        .append(stylesheet.getCfValues().getCfValue("externalURL").getStringValue()).append("\">")
-                        .append(ln);
+                      .append(stylesheet.getCfValues().getCfValue("externalURL").getStringValue()).append("\">")
+                      .append(ln);
             } else {
                 result.append("<style>").append(stylesheet.getCfValues().getCfValue("content").getStringValue())
-                        .append("</style>").append(ln);
+                      .append("</style>").append(ln);
             }
         }
         return result.toString();
     }
 }
+
 
 class WebAppScriptHelper {
     private static final String WORD_REGEX = "(?<=[a-z])(?=[A-Z])|(?<=[A-Z])(?=[A-Z][a-z])|_|\\s|-";
@@ -436,7 +432,7 @@ class WebAppScriptHelper {
     private static final String DASH = "-";
     private static final String UNDERSCORE = "_";
     private static final UnaryOperator<String> TITLE_CASE = word -> word.isEmpty() ? word
-            : Character.toTitleCase(word.charAt(0)) + word.substring(1).toLowerCase();
+        : Character.toTitleCase(word.charAt(0)) + word.substring(1).toLowerCase();
     private static final UnaryOperator<String> UPPER_CASE = word -> word.isEmpty() ? word : word.toUpperCase();
     private static final UnaryOperator<String> LOWER_CASE = word -> word.isEmpty() ? word : word.toLowerCase();
 
