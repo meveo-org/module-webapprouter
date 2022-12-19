@@ -77,5 +77,59 @@ and by clicking on the menu  `Configuration / Modules` you should see `module-we
 
 
 ## Generate the webapp of our onboarding module
- 
+
+The `webaprouter` module install an `Apps` menu in meveo, click on `Apps/Web Application` and click `New` button.
+
+Create a web application with code `mv-onboarding`, the code of the module we want to export as a webapp.
+
+![image](https://user-images.githubusercontent.com/16659140/208462846-6bd1cd40-d562-4f30-bf05-9ec1a32ef0ee.png)
+
+then click `Save` button.
+
+Edit it and click the `Generate Web Application` button. It will take a while but if successfull you will see a message 
+
+
+and in the log you should see 
+```
+15:37:15,303 DEBUG [org.meveo.script.GenerateWebAppScript] (default task-3) CREATE NEW GitRepository: WebApplication
+15:37:17,793 DEBUG [org.meveo.service.git.GitRepositoryService] (default task-3) Start creation of entity GitRepository
+15:37:17,794 DEBUG [org.meveo.service.notification.DefaultObserver] (default task-3) Defaut observer : Entity org.meveo.model.git.GitRepository with id null created
+15:37:17,803 DEBUG [org.meveo.script.GenerateWebAppScript] (default task-3) webappTemplate path: ./meveodata/default/git/WebApplication
+15:37:17,825 DEBUG [org.meveo.service.git.GitRepositoryService] (default task-3) Start creation of entity GitRepository
+15:37:17,825 DEBUG [org.meveo.service.notification.DefaultObserver] (default task-3) Defaut observer : Entity org.meveo.model.git.GitRepository with id null created
+15:37:17,852 DEBUG [org.meveo.script.GenerateWebAppScript] (default task-3) moduleWebApp branch: meveo
+15:37:17,852 DEBUG [org.meveo.script.GenerateWebAppScript] (default task-3) moduleWebApp path: ./meveodata/default/git/mv-onboarding-UI
+15:37:17,867 DEBUG [org.meveo.script.FileTransformer] (default task-3) output file name: ./meveodata/default/git/mv-onboarding-UI/components/layout/TopbarMenu.js
+15:37:17,873 DEBUG [org.meveo.script.GenerateWebAppScript] (default task-3) keycloakUrl: http://host.docker.internal:8081/auth
+15:37:17,874 DEBUG [org.meveo.script.GenerateWebAppScript] (default task-3) sourceFile: ./meveodata/default/git/WebApplication/keycloak.json
+15:37:17,874 DEBUG [org.meveo.script.GenerateWebAppScript] (default task-3) destinationFile: ./meveodata/default/git/mv-onboarding-UI/keycloak.json
+15:37:17,874 DEBUG [org.meveo.script.GenerateWebAppScript] (default task-3) substitutions: {http://host.docker.internal:8081/auth=http://host.docker.internal:8081/auth, meveo=meveo, meveo-web=meveo-web}
+15:37:17,875 DEBUG [org.meveo.script.GenerateWebAppScript] (default task-3) GENERATE NEW PAGE
+15:37:17,875 DEBUG [org.meveo.script.FileTransformer] (default task-3) output file name: ./meveodata/default/git/mv-onboarding-UI/pages/OnboardingForm/NewPage.js
+15:37:17,876 DEBUG [org.meveo.script.GenerateWebAppScript] (default task-3) GENERATE LIST PAGE
+15:37:17,876 DEBUG [org.meveo.script.FileTransformer] (default task-3) output file name: ./meveodata/default/git/mv-onboarding-UI/pages/OnboardingForm/ListPage.js
+15:37:17,877 DEBUG [org.meveo.script.GenerateWebAppScript] (default task-3) GENERATE UPDATE PAGE
+15:37:17,877 DEBUG [org.meveo.script.FileTransformer] (default task-3) output file name: ./meveodata/default/git/mv-onboarding-UI/pages/OnboardingForm/UpdatePage.js
+15:37:17,878 DEBUG [org.meveo.script.GenerateWebAppScript] (default task-3) GENERATE MODELS
+15:37:17,878 DEBUG [org.meveo.script.GenerateWebAppScript] (default task-3) source path: ./meveodata/default/git/WebApplication/model/Parent.js
+15:37:17,878 DEBUG [org.meveo.script.GenerateWebAppScript] (default task-3) GENERATE MODEL FILES
+15:37:17,878 DEBUG [org.meveo.script.GenerateWebAppScript] (default task-3) output file name: ./meveodata/default/git/mv-onboarding-UI/model/OnboardingForm.js
+15:37:17,901 DEBUG [org.meveo.script.EntityActions] (default task-3) actions: []
+15:37:17,903 DEBUG [org.meveo.script.GenerateWebAppScript] (default task-3) GENERATE MODELS
+15:37:17,903 DEBUG [org.meveo.script.GenerateWebAppScript] (default task-3) source path: ./meveodata/default/git/WebApplication/model/index.js
+15:37:17,903 DEBUG [org.meveo.script.GenerateWebAppScript] (default task-3) GENERATE MODELS
+15:37:17,903 DEBUG [org.meveo.script.GenerateWebAppScript] (default task-3) source path: ./meveodata/default/git/WebApplication/model/Child.js
+15:37:17,903 DEBUG [org.meveo.script.GenerateWebAppScript] (default task-3) GENERATE MODELS
+15:37:17,903 DEBUG [org.meveo.script.GenerateWebAppScript] (default task-3) source path: ./meveodata/default/git/WebApplication/model/ChildSchema.js
+15:37:17,903 DEBUG [org.meveo.script.GenerateWebAppScript] (default task-3) GENERATE MODELS
+15:37:17,904 DEBUG [org.meveo.script.GenerateWebAppScript] (default task-3) source path: ./meveodata/default/git/WebApplication/model/ParentSchema.js
+15:37:17,905 DEBUG [org.meveo.script.GenerateWebAppScript] (default task-3) sourceFile: ./meveodata/default/git/WebApplication/config.js
+15:37:17,905 DEBUG [org.meveo.script.GenerateWebAppScript] (default task-3) destinationFile: ./meveodata/default/git/mv-onboarding-UI/config.js
+15:37:17,905 DEBUG [org.meveo.script.GenerateWebAppScript] (default task-3) substitutions: {MODULE_CODE=mv-onboarding, http://localhost:8080/=http://localhost:8080/, WEB_CONTEXT=/meveo}
+15:37:17,980 DEBUG [org.meveo.service.admin.impl.MeveoModuleService] (default task-3) No MeveoModule of code mv-onboarding-UI found
+15:37:17,981 DEBUG [org.meveo.script.GenerateWebAppScript] (default task-3) switch to moduleWebApp branch: master
+15:37:18,052 INFO  [org.meveo.script.GenerateWebAppScript] (default task-3) ***********************************************************
+15:37:18,052 INFO  [org.meveo.script.GenerateWebAppScript] (default task-3) *************  SUCCESSFULLY MERGED TO MASTER  *************
+15:37:18,052 INFO  [org.meveo.script.GenerateWebAppScript] (default task-3) ***********************************************************
+```
 
