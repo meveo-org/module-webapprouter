@@ -64,5 +64,18 @@ then edit the newly created repo
 
 and click the `Install Module` button
 
+![image](https://user-images.githubusercontent.com/16659140/208437118-0aed48e1-416a-41a4-b10b-4ab31ec589a8.png)
 
+Select the `default` repository and clik Install
+![image](https://user-images.githubusercontent.com/16659140/208437241-4cf8ee94-b1eb-4a8c-834f-5470b12e7e6b.png)
+
+If the installation succeeds, you should see a message 
+![image](https://user-images.githubusercontent.com/16659140/208437359-49dee509-7ec5-420a-a494-61e365f7eae1.png)
+
+and by clicking on the menu  `Configuration / Modules` you should see `module-webaprouter` installed
+![image](https://user-images.githubusercontent.com/16659140/208437581-0673c361-5713-4c14-a93a-ace54c89777e.png)
+
+
+## Generate the webapp of our onboarding module
+ 
 
