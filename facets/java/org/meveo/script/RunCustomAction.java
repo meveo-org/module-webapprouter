@@ -102,7 +102,7 @@ public class RunCustomAction extends Script {
         LOG.debug("this.entityParameter: {}", entityParameter);
         LOG.debug("uuid: {}", uuid);
 
-        EntityCustomAction action = ecaService.findByCode(this.actionCode);
+        EntityCustomAction action = ecaService.findByCodeAndAppliesTo(this.actionCode, entityParameter.getAppliesTo());
         if (action == null) {
           throw new BusinessException("Action not found: " + this.actionCode);
         }
@@ -172,6 +172,7 @@ class EntityList {
 class EntityParameter {
   private String code;
   private String uuid;
+  private String appliesTo;
 
   public String getCode() {
     return code;
@@ -188,9 +189,17 @@ class EntityParameter {
   public void setUuid(String uuid) {
     this.uuid = uuid;
   }
+  
+  public void setAppliesTo(String appliesTo) {
+    this.appliesTo = appliesTo;
+  }
+  
+  public String getAppliesTo() {
+  	return this.appliesTo;
+  }
 
   @Override
   public String toString() {
-    return "EntityParameter [code=" + code + ", uuid=" + uuid + "]";
+    return "EntityParameter [code=" + code + ", uuid=" + uuid + ", appliesTo = " + appliesTo + "]";
   }
 }
