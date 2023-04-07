@@ -39,6 +39,7 @@ public class RunCustomAction extends Script {
   private Repository repository;
   private String actionCode;
   private EntityList runWith;
+  private Map<String, Object> scriptParameters;
   private Map<String, Object> result;
 
   public String getActionCode() {
@@ -56,8 +57,12 @@ public class RunCustomAction extends Script {
   public void setRunWith(EntityList runWith) {
     this.runWith = runWith;
   }
+  
+  public void setScriptParameters(Map<String, Object> scriptParameters) {
+	this.scriptParameters = scriptParameters;
+}
 
-  public Repository getDefaultRepository() {
+public Repository getDefaultRepository() {
     if (repository == null) {
       repository = repositoryService.findDefaultRepository();
     }
@@ -92,22 +97,36 @@ public class RunCustomAction extends Script {
         String entityCode = entityParameter.getCode();
         String uuid = entityParameter.getUuid();
         CustomEntityTemplate entityTemplate = cetService.findByCodeOrDbTablename(entityCode);
-        Map<String, Object> entity = crossStorageService
-            .find(this.getDefaultRepository(), entityTemplate, uuid, true);
+        Map<String, Object> entity;
+        try {        	
+        	entity = crossStorageService
+        			.find(this.getDefaultRepository(), entityTemplate, uuid, true);
+        } catch (EntityDoesNotExistsException e) {
+            entity = null;
+        }
         if (entity == null) {
-          throw new BusinessException("Entity not found: " + entityParameter);
+          entity = new HashMap<String, Object>();
+          entity.put("uuid", uuid);
+          entity.put("cetCode", entityCode);
         }
         LOG.debug("entity: {}", entity);
         LOG.debug("this.actionCode: {}", this.actionCode);
         LOG.debug("this.entityParameter: {}", entityParameter);
         LOG.debug("uuid: {}", uuid);
 
-        EntityCustomAction action = ecaService.findByCodeAndAppliesTo(this.actionCode, entityParameter.getAppliesTo());
+        EntityCustomAction action = ecaService.findByCode(this.actionCode);
         if (action == null) {
           throw new BusinessException("Action not found: " + this.actionCode);
         }
         Map<String, Object> context = new HashMap<>();
         context.put(Script.CONTEXT_ACTION, this.actionCode);
+        
+        if(this.scriptParameters != null) {
+        	for(String key : this.scriptParameters.keySet()) {
+        		context.put(key, this.scriptParameters.get(key));
+        	}
+        }
+        
         Map<Object, Object> elContext = new HashMap<>(context);
         elContext.put("entity", entity);
 
@@ -144,13 +163,6 @@ public class RunCustomAction extends Script {
           singleResult.put("value", (String) scriptResult.get(Script.RESULT_GUI_OUTCOME));
         }
         result.put(entityCode + ":" + uuid, singleResult);
-      } catch (EntityDoesNotExistsException e) {
-        LOG.error("Failed to execute a script {} on entity {}", this.actionCode, entityParameter,
-            e);
-        throw new BusinessException(
-            "Failed to execute custom action: " + this.actionCode + " on entity: "
-                + entityParameter,
-            e);
       } finally {
         LOG.info("Run " + this.actionCode + " action done.");
       }

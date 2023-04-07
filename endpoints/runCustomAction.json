@@ -16,6 +16,11 @@
     "multivalued" : false,
     "parameterName" : "runWith",
     "valueRequired" : true
+  }, {
+    "serviceParameter" : "scriptParameters",
+    "multivalued" : false,
+    "parameterName" : "scriptParameters",
+    "valueRequired" : false
   } ],
   "pathParameters" : [ ],
   "roles" : [ ],
@@ -23,5 +28,8 @@
   "serializeResult" : true,
   "contentType" : "application/json",
   "basePath" : "runCustomAction",
-  "path" : "/"
+  "path" : "/",
+  "pool" : {
+    "usePool" : false
+  }
 }

@@ -10,6 +10,11 @@ const requestSchema = {
   "$schema" : "http://json-schema.org/draft-07/schema",
   "type" : "object",
   "properties" : {
+    "scriptParameters" : {
+      "title" : "scriptParameters",
+      "type" : "string",
+      "minLength" : 1
+    },
     "runWith" : {
       "title" : "runWith",
       "type" : "string",
